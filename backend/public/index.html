@@ -168,10 +168,10 @@
         loaderOut.value = "-- Menghubungi server Prometheus...\n-- Harap tunggu.";
 
         try {
-            // URL ini menyesuaikan. Jika frontend dan backend satu server (di Railway), gunakan /api/obfuscate
-            // Jika frontend dipisah ke Vercel, ganti url ini menjadi URL lengkap Railway kamu.
-            const response = await fetch('/api/obfuscate', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+            // URL sudah diatur menunjuk ke backend Railway kamu
+            const response = await fetch('https://remote-loader-project-production.up.railway.app/api/obfuscate', {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ script, preset, antiTamper: useAntiTamper })
             });
 
