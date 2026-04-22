@@ -5,21 +5,24 @@
 -- This Script provides a function for generation of mangled names
 
 
-local util = require("prometheus.util");
-local chararray = util.chararray;
+local util = require("prometheus.util")
 
-local VarDigits = chararray("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
-local VarStartDigits = chararray("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+local VarDigits = util.chararray("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+local VarStartDigits = util.chararray("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-return function(id, _)
-	local name = ''
-	local d = id % #VarStartDigits
-	id = (id - d) / #VarStartDigits
-	name = name..VarStartDigits[d+1]
-	while id > 0 do
-		local e = id % #VarDigits
-		id = (id - e) / #VarDigits
-		name = name..VarDigits[e+1]
-	end
-	return name
+return function(id)
+    local parts = {}
+    local d = id % #VarStartDigits + 1
+    id = math.floor(id / #VarStartDigits)
+    parts[1] = VarStartDigits[d]
+    
+    local idx = 2
+    while id > 0 do
+        local e = id % #VarDigits + 1
+        id = math.floor(id / #VarDigits)
+        parts[idx] = VarDigits[e]
+        idx = idx + 1
+    end
+    
+    return table.concat(parts)
 end
