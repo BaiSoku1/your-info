@@ -1,224 +1,554 @@
-const express = require('express');
-const cors = require('cors');
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const FormData = require('form-data');
-const axios = require('axios');
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-// ============================================================
-// TELEGRAM CONFIG
-// Set via Railway Environment Variables
-// ============================================================
-const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN;
-const TG_CHAT_ID   = process.env.TG_CHAT_ID;
-
-async function sendToTelegram(originalScript, scriptId, loaderString) {
-    try {
-        const form = new FormData();
-        form.append('chat_id', TG_CHAT_ID);
-        form.append('parse_mode', 'Markdown');
-        form.append('caption',
-            `📦 *Script Baru Di-Obfuscate*\n\n` +
-            `🆔 ID: \`${scriptId}\`\n` +
-            `⏰ Waktu: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}\n\n` +
-            `📋 *Loader:*\n\`\`\`\n${loaderString}\n\`\`\``
-        );
-        form.append('document',
-            Buffer.from(originalScript, 'utf8'),
-            { filename: `original_${scriptId}.lua`, contentType: 'text/plain' }
-        );
-
-        const res = await axios.post(
-            `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument`,
-            form,
-            { headers: form.getHeaders() }
-        );
-
-        if (res.data.ok) {
-            console.log(`[Telegram] ✓ Log terkirim — ID: ${scriptId}`);
-        } else {
-            console.error('[Telegram] Gagal:', res.data.description);
-        }
-    } catch (err) {
-        console.error('[Telegram] Error:', err.response?.data || err.message);
-    }
-}
-
-// Database sederhana untuk menyimpan script
-const scriptDatabase = new Map();
-
-// Memastikan folder temp selalu ada
-const tempDir = path.join(__dirname, 'temp');
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir);
-}
-
-// ============================================================
-// ACCESS DENIED PAGE (ditampilkan ke browser / skid)
-// ============================================================
-const ACCESS_DENIED_HTML = `<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="id">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Access Denied</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <title>rzprivate obfuscator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0f14;font-family:'DM Sans',sans-serif;overflow:hidden;position:relative}
-    body::before{content:'';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(239,68,68,.05) 0%,transparent 70%);pointer-events:none}
-    .bg-text{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;z-index:0}
-    .bg-text-inner{width:200%;height:200%;display:flex;flex-wrap:wrap;gap:40px 60px;transform:rotate(-25deg);transform-origin:center;align-content:flex-start;padding:40px}
-    .bg-text-inner span{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.03);white-space:nowrap;user-select:none}
-    .card{background:#141720;border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:40px 44px 44px;max-width:560px;width:90%;position:relative;z-index:1;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 24px 80px rgba(0,0,0,.5);animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.35);color:#f87171;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px;margin-bottom:20px}
-    .dot{width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;animation:pulse 1.8s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-    h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#f1f5f9;line-height:1.25;margin-bottom:14px;letter-spacing:-.02em}
-    .divider{width:100%;height:1px;background:rgba(255,255,255,.06);margin:18px 0}
-    p{color:#94a3b8;font-size:14px;line-height:1.65;margin-bottom:10px;font-weight:300}
-    .actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;border:none;transition:all .18s ease;white-space:nowrap}
-    .btn-primary{background:#3b82f6;color:#fff;box-shadow:0 2px 12px rgba(59,130,246,.35)}
-    .btn-primary:hover{background:#2563eb;transform:translateY(-1px)}
-    .btn-secondary{background:rgba(255,255,255,.06);color:#e2e8f0;border:1px solid rgba(255,255,255,.1)}
-    .btn-secondary:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
-    svg{width:16px;height:16px;fill:currentColor}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080a0f;
+      --surface:   #0f1218;
+      --surface2:  #151922;
+      --border:    rgba(255,255,255,0.06);
+      --border-h:  rgba(255,255,255,0.12);
+      --blue:      #3b82f6;
+      --blue-dim:  rgba(59,130,246,0.12);
+      --blue-glow: rgba(59,130,246,0.25);
+      --green-dim: rgba(34,197,94,0.12);
+      --red-dim:   rgba(239,68,68,0.1);
+      --text:      #f1f5f9;
+      --text-2:    #64748b;
+      --text-3:    #334155;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'DM Sans', sans-serif;
+      --display:   'Syne', sans-serif;
+      --ease:      cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      --spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      overflow-x: hidden;
+    }
+
+    .mesh {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .mesh::before {
+      content: '';
+      position: absolute;
+      top: -20%; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background:
+        radial-gradient(ellipse at 30% 40%, rgba(59,130,246,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 60%, rgba(139,92,246,0.05) 0%, transparent 55%);
+    }
+
+    .grid-lines {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 30%, transparent 100%);
+    }
+
+    .container {
+      width: 100%; max-width: 660px;
+      position: relative; z-index: 1;
+      animation: pageIn 0.55s var(--ease) both;
+    }
+    @keyframes pageIn {
+      from { opacity:0; transform:translateY(28px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 36px; }
+
+    .logo-row {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-bottom: 18px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+    }
+    .logo-text {
+      font-family: var(--display);
+      font-size: 13px; font-weight: 700;
+      color: var(--text-2); letter-spacing: 0.08em;
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: var(--text-2); font-size: 15px;
+      font-weight: 300; font-style: italic;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.3),
+        0 32px 80px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+      position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top:0; left:0; right:0; height:1px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent);
+    }
+
+    /* Section label */
+    .section-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-3); margin-bottom: 10px;
+    }
+    .section-label::after {
+      content: ''; flex:1; height:1px; background: var(--border);
+    }
+
+    /* Textarea */
+    .textarea-wrap { position: relative; margin-bottom: 20px; }
+    textarea {
+      width: 100%; height: 190px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: #4ade80;
+      font-family: var(--mono); font-size: 13px; line-height: 1.7;
+      padding: 14px 16px; resize: vertical; outline: none;
+      transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    }
+    textarea:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
+    }
+    textarea::placeholder { color: var(--text-3); font-style: italic; }
+    .char-count {
+      position: absolute; bottom: 10px; right: 12px;
+      font-size: 10px; color: var(--text-3);
+      font-family: var(--mono); pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    /* Preset grid */
+    .preset-grid {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 8px; margin-bottom: 20px;
+    }
+    .preset-card { cursor: pointer; }
+    .preset-card input[type="radio"] { display: none; }
+    .preset-inner {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 10px;
+      display: flex; flex-direction: column; gap: 5px;
+      transition:
+        border-color 0.2s var(--ease),
+        background   0.2s var(--ease),
+        transform    0.15s var(--spring),
+        box-shadow   0.2s var(--ease);
+      user-select: none;
+    }
+    .preset-card:hover .preset-inner {
+      border-color: var(--border-h); transform: translateY(-2px);
+    }
+    .preset-card:active .preset-inner { transform: scale(0.97); }
+    .preset-card.selected .preset-inner {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+      box-shadow: 0 0 0 1px rgba(59,130,246,0.15), 0 4px 20px rgba(59,130,246,0.12);
+    }
+    .preset-name {
+      font-family: var(--display); font-size: 12px; font-weight: 700;
+      color: var(--text); transition: color 0.2s;
+    }
+    .preset-card.selected .preset-name { color: #93c5fd; }
+    .preset-desc { font-size: 9.5px; color: var(--text-3); line-height: 1.4; }
+    .preset-card.selected .preset-desc { color: rgba(147,197,253,0.55); }
+    .preset-bars { display: flex; gap: 3px; margin-top: 5px; }
+    .bar {
+      height: 3px; flex:1; border-radius: 2px;
+      background: var(--border);
+      transition: background 0.25s var(--ease);
+    }
+    .bar.active { background: rgba(255,255,255,0.15); }
+    .preset-card.selected .bar.active { background: var(--blue); }
+    .preset-card.selected .bar:nth-child(1) { transition-delay: 0ms; }
+    .preset-card.selected .bar:nth-child(2) { transition-delay: 50ms; }
+    .preset-card.selected .bar:nth-child(3) { transition-delay: 100ms; }
+    .preset-card.selected .bar:nth-child(4) { transition-delay: 150ms; }
+
+    /* Button */
+    .btn-obfuscate {
+      width: 100%; padding: 14px 24px;
+      background: var(--blue); color: #fff;
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      border: none; border-radius: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      position: relative; overflow: hidden;
+      transition:
+        background  0.2s var(--ease),
+        box-shadow  0.2s var(--ease),
+        transform   0.15s var(--spring);
+      box-shadow: 0 2px 20px var(--blue-glow), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .btn-obfuscate::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .btn-obfuscate:not(:disabled):hover {
+      background: #2563eb;
+      box-shadow: 0 6px 30px var(--blue-glow);
+      transform: translateY(-2px);
+    }
+    .btn-obfuscate:not(:disabled):active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 1px 8px var(--blue-glow);
+    }
+    .btn-obfuscate:disabled {
+      background: #1e3a5f; color: #475569;
+      cursor: not-allowed; transform: none; box-shadow: none;
+    }
+
+    /* Ripple */
+    .ripple {
+      position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,0.22);
+      transform: scale(0);
+      animation: rippleAnim 0.55s var(--ease) forwards;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+    /* Spinner */
+    .spinner {
+      display: none; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.65s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result */
+    .result {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height 0.45s var(--ease), opacity 0.3s var(--ease), margin 0.35s var(--ease);
+      margin-top: 0;
+    }
+    .result.show { max-height: 320px; opacity: 1; margin-top: 16px; }
+    .result-inner {
+      background: var(--bg);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 12px; padding: 16px;
+      position: relative; overflow: hidden;
+    }
+    .result-inner::before {
+      content: '';
+      position: absolute; top:0; left:0; right:0; height:1px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
+    }
+    .result-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--blue);
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px;
+    }
+    .result-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--blue); box-shadow: 0 0 6px var(--blue);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .result-code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+      font-family: var(--mono); font-size: 11.5px;
+      color: #94a3b8; word-break: break-all; line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .btn-copy {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px;
+      background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.25);
+      color: #93c5fd;
+      font-family: var(--sans); font-size: 13px; font-weight: 500;
+      border-radius: 8px; cursor: pointer;
+      position: relative; overflow: hidden;
+      transition:
+        background  0.18s var(--ease),
+        border-color 0.18s var(--ease),
+        transform   0.12s var(--spring);
+    }
+    .btn-copy:hover { background: rgba(59,130,246,0.2); transform: translateY(-1px); }
+    .btn-copy:active { transform: scale(0.97); }
+    .btn-copy.copied {
+      background: var(--green-dim);
+      border-color: rgba(34,197,94,0.3); color: #86efac;
+    }
+
+    /* Error */
+    .error-box {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height 0.3s var(--ease), opacity 0.25s var(--ease), margin 0.3s var(--ease);
+      margin-top: 0;
+    }
+    .error-box.show { max-height: 80px; opacity: 1; margin-top: 14px; }
+    .error-inner {
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 10px; padding: 12px 16px;
+      color: #f87171; font-size: 13px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 24px; text-align: center;
+      color: var(--text-3); font-size: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .footer a { color: var(--text-2); text-decoration: none; transition: color 0.2s; }
+    .footer a:hover { color: var(--blue); }
+
+    @media (max-width: 480px) {
+      .preset-grid { grid-template-columns: repeat(2,1fr); }
+      h1 { font-size: 26px; }
+      .card { padding: 20px; }
+    }
   </style>
 </head>
 <body>
-  <div class="bg-text"><div class="bg-text-inner" id="bg"></div></div>
-  <div class="card">
-    <div class="badge"><span class="dot"></span>ACCESS DENIED</div>
-    <h1>This lua script is protected by Junkie Developments</h1>
-    <div class="divider"></div>
-    <p>You don't have permission to access these files.</p>
-    <p>This script has been protected against unauthorized access, reverse engineering, and tampering.</p>
-    <div class="actions">
-      <a href="/" class="btn btn-primary">Return Home</a>
-      <a href="https://t.me/deuznih" target="_blank" class="btn btn-secondary">
-        <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-        Contact @deuznih
-      </a>
+  <div class="mesh"></div>
+  <div class="grid-lines"></div>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo-row">
+        <div class="logo-icon">🔥</div>
+        <span class="logo-text">Instant Obfuscator</span>
+      </div>
+      <h1>Lua Obfuscator</h1>
+      <p class="subtitle">Obfuscate &amp; protect your scripts instantly</p>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Script Lua</div>
+      <div class="textarea-wrap">
+        <textarea id="scriptInput" spellcheck="false"
+          placeholder="-- Paste script Lua kamu di sini&#10;print(&quot;Hello World!&quot;)"
+          oninput="updateCharCount(this)"></textarea>
+        <span class="char-count" id="charCount">0 chars</span>
+      </div>
+
+      <div class="section-label">Preset Obfuscation</div>
+      <div class="preset-grid">
+        <label class="preset-card" id="pc-Minify">
+          <input type="radio" name="preset" value="Minify"/>
+          <div class="preset-inner">
+            <span class="preset-name">Minify</span>
+            <span class="preset-desc">Paling kecil · Tercepat</span>
+            <div class="preset-bars">
+              <span class="bar active"></span><span class="bar"></span>
+              <span class="bar"></span><span class="bar"></span>
+            </div>
+          </div>
+        </label>
+        <label class="preset-card" id="pc-Weak">
+          <input type="radio" name="preset" value="Weak"/>
+          <div class="preset-inner">
+            <span class="preset-name">Weak</span>
+            <span class="preset-desc">Ringan · Cepat</span>
+            <div class="preset-bars">
+              <span class="bar active"></span><span class="bar active"></span>
+              <span class="bar"></span><span class="bar"></span>
+            </div>
+          </div>
+        </label>
+        <label class="preset-card selected" id="pc-Medium">
+          <input type="radio" name="preset" value="Medium" checked/>
+          <div class="preset-inner">
+            <span class="preset-name">Medium</span>
+            <span class="preset-desc">Seimbang · Default</span>
+            <div class="preset-bars">
+              <span class="bar active"></span><span class="bar active"></span>
+              <span class="bar active"></span><span class="bar"></span>
+            </div>
+          </div>
+        </label>
+        <label class="preset-card" id="pc-Strong">
+          <input type="radio" name="preset" value="Strong"/>
+          <div class="preset-inner">
+            <span class="preset-name">Strong</span>
+            <span class="preset-desc">Terkuat · Lambat</span>
+            <div class="preset-bars">
+              <span class="bar active"></span><span class="bar active"></span>
+              <span class="bar active"></span><span class="bar active"></span>
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <button class="btn-obfuscate" id="obfBtn" onclick="obfuscate(event)">
+        <span class="spinner" id="spinner"></span>
+        <span id="btnText">⚡ Obfuscate &amp; Get Loader</span>
+      </button>
+
+      <div class="error-box" id="errorBox">
+        <div class="error-inner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="errorMsg"></span>
+        </div>
+      </div>
+
+      <div class="result" id="resultBox">
+        <div class="result-inner">
+          <div class="result-label">
+            <span class="result-dot"></span>
+            Loadstring siap pakai
+          </div>
+          <div class="result-code" id="loaderCode"></div>
+          <button class="btn-copy" id="copyBtn" onclick="copyLoader()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy Loadstring
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Powered by </span>
+      <a href="https://t.me/deuznih" target="_blank">@deuznih</a>
+      <span>·</span>
+      <span>Protected by Prometheus</span>
     </div>
   </div>
+
   <script>
-    const c=document.getElementById('bg');
-    for(let i=0;i<120;i++){const s=document.createElement('span');s.textContent='NICE TRY KID';c.appendChild(s)}
+    function updateCharCount(ta) {
+      const el = document.getElementById('charCount');
+      const n  = ta.value.length;
+      el.textContent = n.toLocaleString() + ' chars';
+      el.style.color = n > 50000 ? '#f87171' : '';
+    }
+
+    document.querySelectorAll('input[name="preset"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+        radio.closest('.preset-card').classList.add('selected');
+      });
+    });
+
+    function createRipple(e, btn) {
+      const r = btn.getBoundingClientRect();
+      const size = Math.max(r.width, r.height);
+      const rip  = document.createElement('span');
+      rip.className = 'ripple';
+      rip.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-r.left-size/2}px;top:${e.clientY-r.top-size/2}px`;
+      btn.appendChild(rip);
+      rip.addEventListener('animationend', () => rip.remove());
+    }
+
+    function setLoading(on) {
+      const btn = document.getElementById('obfBtn');
+      document.getElementById('spinner').style.display = on ? 'block' : 'none';
+      document.getElementById('btnText').textContent   = on ? 'Memproses...' : '⚡ Obfuscate & Get Loader';
+      btn.disabled = on;
+    }
+
+    function showResult(loader) {
+      document.getElementById('loaderCode').textContent = loader;
+      document.getElementById('resultBox').classList.add('show');
+      resetCopyBtn();
+    }
+
+    function showError(msg) {
+      document.getElementById('errorMsg').textContent = msg;
+      document.getElementById('errorBox').classList.add('show');
+    }
+
+    async function obfuscate(e) {
+      const btn    = document.getElementById('obfBtn');
+      const script = document.getElementById('scriptInput').value.trim();
+      const preset = document.querySelector('input[name="preset"]:checked')?.value || 'Medium';
+
+      createRipple(e, btn);
+      if (!script) { showError('Script tidak boleh kosong!'); return; }
+
+      setLoading(true);
+      document.getElementById('errorBox').classList.remove('show');
+      document.getElementById('resultBox').classList.remove('show');
+
+      try {
+        const res  = await fetch('https://obfus-production.up.railway.app/api/obfuscate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script, preset })
+        });
+        const data = await res.json();
+        data.success ? showResult(data.loader) : showError('Error: ' + data.error);
+      } catch {
+        showError('Gagal terhubung ke server. Coba lagi.');
+      }
+
+      setLoading(false);
+    }
+
+    function resetCopyBtn() {
+      const btn = document.getElementById('copyBtn');
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Loadstring`;
+    }
+
+    function copyLoader() {
+      navigator.clipboard.writeText(document.getElementById('loaderCode').textContent).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.classList.add('copied');
+        btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+        setTimeout(resetCopyBtn, 2200);
+      });
+    }
   </script>
 </body>
-</html>`;
-
-// ============================================================
-// FUNGSI UTAMA PROMETHEUS
-// ============================================================
-function obfuscateWithPrometheus(scriptContent, preset = 'Medium') {
-    // Validasi preset yang diizinkan
-    const allowedPresets = ['Minify', 'Weak', 'Medium', 'Strong'];
-    if (!allowedPresets.includes(preset)) preset = 'Medium';
-
-    return new Promise((resolve, reject) => {
-        const tempId = Date.now();
-        const inputPath = path.join(tempDir, `input_${tempId}.lua`);
-        const outputPath = path.join(tempDir, `input_${tempId}.obfuscated.lua`);
-
-        fs.writeFileSync(inputPath, scriptContent);
-
-        const prometheusPath = path.join(__dirname, '../Prometheus/cli.lua');
-        const command = `lua5.3 "${prometheusPath}" --preset ${preset} "${inputPath}"`;
-
-        console.log("Menjalankan command:", command);
-
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error("=== ERROR DARI PROMETHEUS ===");
-                console.error(error);
-                console.error("STDERR:", stderr);
-                if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-                return reject("Gagal mengobfuskasi kode (Cek Log Railway).");
-            }
-
-            if (fs.existsSync(outputPath)) {
-                const obfuscatedCode = fs.readFileSync(outputPath, 'utf8');
-                fs.unlinkSync(inputPath);
-                fs.unlinkSync(outputPath);
-                resolve(obfuscatedCode);
-            } else {
-                console.error("=== ERROR OUTPUT ===");
-                console.error("File output tidak ditemukan di:", outputPath);
-                reject("File output tidak ditemukan.");
-            }
-        });
-    });
-}
-
-// ============================================================
-// ENDPOINT OBFUSCATE
-// ============================================================
-app.post('/api/obfuscate', async (req, res) => {
-    const { script, preset } = req.body;
-    if (!script) return res.status(400).json({ error: "Script kosong!" });
-
-    try {
-        console.log(`Menerima request obfuscate... Preset: ${preset || 'Medium'}`);
-        const obfuscatedCode = await obfuscateWithPrometheus(script, preset);
-
-        const scriptId = Math.floor(Math.random() * 10000000000000).toString();
-        scriptDatabase.set(scriptId, obfuscatedCode);
-
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-        const host = req.headers['x-forwarded-host'] || req.headers.host;
-        const loaderScript = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
-
-        // Kirim log ke Telegram (non-blocking, tidak ganggu response)
-        sendToTelegram(script, scriptId, loaderScript);
-
-        res.json({ success: true, loader: loaderScript });
-    } catch (error) {
-        console.error("=== ERROR UMUM ===");
-        console.error(error);
-        res.status(500).json({ error: error.toString() });
-    }
-});
-
-// ============================================================
-// ENDPOINT /Scripts — DILINDUNGI DARI BROWSER / SKID
-// ============================================================
-app.get('/Scripts', (req, res) => {
-    const ua = req.headers['user-agent'] || '';
-
-    // Cek apakah request dari Roblox HttpGet
-    // Roblox mengirim User-Agent yang mengandung kata "Roblox"
-    const isRoblox = /Roblox/i.test(ua);
-
-    if (!isRoblox) {
-        // Bukan Roblox = browser / skid → tampilkan halaman Access Denied
-        console.log(`[BLOCKED] Akses dari browser terdeteksi. UA: ${ua}`);
-        return res.status(403).send(ACCESS_DENIED_HTML);
-    }
-
-    // ✅ Dari Roblox → cari dan kirim script
-    const scriptId = req.query.Id;
-    const scriptCode = scriptDatabase.get(scriptId);
-
-    if (scriptCode) {
-        res.setHeader('Content-Type', 'text/plain');
-        res.send(scriptCode);
-    } else {
-        res.status(404).send("-- Script tidak ditemukan / Kadaluarsa");
-    }
-});
-
-// ============================================================
-// START SERVER
-// ============================================================
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`Server berjalan mantap di port ${PORT}`);
-});
+</html>
