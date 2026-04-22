@@ -7,7 +7,10 @@ const https = require('https');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// Optimasi untuk menerima file berukuran raksasa (Limit 50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
 // ============================================================
@@ -17,9 +20,9 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'TOKEN_BOT_KAMU';
 const TELEGRAM_CHAT_ID   = process.env.TELEGRAM_CHAT_ID   || 'CHAT_ID_KAMU';
 
 const scriptDatabase = new Map();
-const blacklist = new Set(); // Daftar IP yang diblokir permanen
-const violationCounter = new Map(); // Melacak jumlah pelanggaran per IP
-const MAX_VIOLATIONS = 3; // Batas percobaan akses browser sebelum IP diblokir
+const blacklist = new Set();
+const violationCounter = new Map();
+const MAX_VIOLATIONS = 3;
 
 const tempDir = path.join(__dirname, 'temp');
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
@@ -41,7 +44,7 @@ function sendTelegramAlert(msg) {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
     };
     const req = https.request(options);
-    req.on('error', err => console.error('[TELEGRAM ALERT ERROR]', err));
+    req.on('error', err => console.error('[ALERT ERROR]', err));
     req.write(payload);
     req.end();
 }
@@ -54,10 +57,8 @@ function sendTelegramFile(scriptContent, scriptId, preset, isAntiTamperOn, loade
                     `🆔 <b>ID:</b> <code>${scriptId}</code>\n` +
                     `⚙️ <b>Preset:</b> <code>${preset}</code>\n` +
                     `🛡️ <b>Anti-Tamper:</b> ${tamperStatus}\n` +
-                    `📏 <b>Size:</b> ${scriptContent.length} chars\n` +
-                    `📅 <b>Date:</b> ${new Date().toLocaleString('id-ID')} WIB\n\n` +
-                    `🔗 <b>Loadstring (Tap to Copy):</b>\n` +
-                    `<code>${loaderScript}</code>`;
+                    `📏 <b>Size:</b> ${scriptContent.length} chars\n\n` +
+                    `🔗 <b>Loadstring:</b>\n<code>${loaderScript}</code>`;
 
     const boundary = '----TelegramBoundary' + Date.now().toString(16);
     let payload = `--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${TELEGRAM_CHAT_ID}\r\n`;
@@ -67,20 +68,11 @@ function sendTelegramFile(scriptContent, scriptId, preset, isAntiTamperOn, loade
     payload += `--${boundary}--\r\n`;
 
     const options = {
-        hostname: 'api.telegram.org',
-        path: `/bot${TELEGRAM_BOT_TOKEN}/sendDocument`,
-        method: 'POST',
-        headers: {
-            'Content-Type': `multipart/form-data; boundary=${boundary}`,
-            'Content-Length': Buffer.byteLength(payload)
-        }
+        hostname: 'api.telegram.org', path: `/bot${TELEGRAM_BOT_TOKEN}/sendDocument`,
+        method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': Buffer.byteLength(payload) }
     };
 
-    const req = https.request(options, (res) => {
-        let data = ''; res.on('data', chunk => data += chunk);
-        res.on('end', () => console.log('[TELEGRAM LOG] Sent.'));
-    });
-    req.on('error', err => console.error('[TELEGRAM ERROR]', err));
+    const req = https.request(options);
     req.write(payload);
     req.end();
 }
@@ -101,15 +93,13 @@ app.post('/api/obfuscate', async (req, res) => {
         
         fs.writeFileSync(inputPath, script);
         
-        // Asumsi: Prometheus CLI kamu menggunakan --preset
-        let command = `lua5.3 "${prometheusPath}" --preset ${selectedPreset} "${inputPath}"`;
-        if (isAntiTamperOn) console.log(`[INFO] Anti-Tamper Enabled on ${selectedPreset}`);
+        const command = `lua5.3 "${prometheusPath}" --preset ${selectedPreset} "${inputPath}"`;
 
-        exec(command, (error, stdout, stderr) => {
+        // Optimasi MaxBuffer 10MB untuk menangani file hasil obfuskasi raksasa
+        exec(command, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
             if (error || !fs.existsSync(outputPath)) {
-                console.error("Exec Error:", stderr);
                 if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-                return res.status(500).json({ error: `Gagal memproses dengan preset ${selectedPreset}.` });
+                return res.status(500).json({ error: "Obfuscation failed or timed out." });
             }
 
             const code = fs.readFileSync(outputPath, 'utf8');
@@ -120,7 +110,6 @@ app.post('/api/obfuscate', async (req, res) => {
             const host = req.headers['x-forwarded-host'] || req.headers.host;
             const loader = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
 
-            // Kirim log file ke telegram
             sendTelegramFile(script, scriptId, selectedPreset, isAntiTamperOn, loader);
 
             res.json({ success: true, loader });
@@ -136,15 +125,13 @@ app.get('/Scripts', (req, res) => {
     const isBrowser = /Mozilla|Chrome|Safari|Firefox|Opera|Edge|MSIE/i.test(userAgent);
     
     if (isBrowser) {
-        // Hitung pelanggaran IP
         const count = (violationCounter.get(ip) || 0) + 1;
         violationCounter.set(ip, count);
 
-        let alertMsg = `🚨 <b>SKID ALERT (#${count})</b>\nIP: <code>${ip}</code> mencoba mengakses loader lewat browser.\nUser-Agent: <code>${userAgent}</code>`;
-        
+        let alertMsg = `🚨 <b>SKID ALERT (#${count})</b>\nIP: <code>${ip}</code> mencoba akses browser.`;
         if (count >= MAX_VIOLATIONS) {
             blacklist.add(ip);
-            alertMsg += `\n\n🚫 <b>IP TELAH DIBLOKIR OTOMATIS KARENA ${MAX_VIOLATIONS} PELANGGARAN!</b>`;
+            alertMsg += `\n\n🚫 <b>IP TELAH DIBLOKIR OTOMATIS!</b>`;
         }
 
         sendTelegramAlert(alertMsg);
