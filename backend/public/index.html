@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Codespace Lua Obfuscator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: white; padding: 20px; }
+        textarea { width: 100%; height: 200px; background: #1e1e1e; color: #00ff00; padding: 10px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 10px;}
+        .result { margin-top: 20px; background: #222; padding: 15px; border-left: 4px solid #007bff; word-break: break-all;}
+    </style>
+</head>
+<body>
+    <h2>Remote Loader Obfuscator</h2>
+    <textarea id="scriptInput" placeholder='print("Hello dari Codespaces!")'></textarea><br>
+    <button onclick="obfuscate()">Obfuscate & Get Loader</button>
+
+    <div id="resultBox" class="result" style="display: none;">
+        <strong>Loadstring Anda:</strong><br><br>
+        <code id="loaderCode"></code>
+    </div>
+
+    <script>
+        async function obfuscate() {
+            const script = document.getElementById('scriptInput').value;
+            const btn = document.querySelector('button');
+            btn.innerText = "Memproses...";
+            
+            try {
+                // Di Codespaces, kita panggil '/api/obfuscate' secara relatif
+                const response = await fetch('/api/obfuscate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script: script })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('resultBox').style.display = 'block';
+                    document.getElementById('loaderCode').innerText = data.loader;
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (err) {
+                alert("Gagal terhubung.");
+            }
+            btn.innerText = "Obfuscate & Get Loader";
+        }
+    </script>
+</body>
+</html>
