@@ -1,430 +1,292 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RBX Loader — Obfuscator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBX Loader | Premium Obfuscator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --card-bg: rgba(20, 20, 30, 0.6);
+            --accent: #3b82f6; /* Modern Blue */
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --success: #10b981;
+        }
 
-  :root {
-    --red: #ff2d2d;
-    --red-dim: rgba(255,45,45,0.1);
-    --red-glow: rgba(255,45,45,0.3);
-    --green: #2dff8e;
-    --green-dim: rgba(45,255,142,0.1);
-    --blue: #2d8eff;
-    --bg: #050508;
-    --surface: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.07);
-    --border-red: rgba(255,45,45,0.2);
-    --text: rgba(255,255,255,0.85);
-    --muted: rgba(255,255,255,0.35);
-    --mono: 'Share Tech Mono', monospace;
-    --display: 'Syne', sans-serif;
-  }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-  html, body {
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 14px;
-  }
+        .container {
+            width: 100%;
+            max-width: 850px;
+            animation: fadeIn 0.8s ease-out;
+        }
 
-  /* ── BACKGROUND ─────────────────────────────── */
-  .grid-bg {
-    position: fixed; inset: 0; z-index: 0;
-    background-image:
-      linear-gradient(rgba(255,45,45,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,45,45,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    animation: gridDrift 25s linear infinite;
-    pointer-events: none;
-  }
-  @keyframes gridDrift {
-    0%   { background-position: 0 0; }
-    100% { background-position: 40px 40px; }
-  }
-  .scanlines {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg, transparent, transparent 2px,
-      rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px
-    );
-  }
-  .vignette {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
-  }
+        /* Header Section */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header p {
+            color: var(--text-dim);
+            margin-top: 8px;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
 
-  /* ── CORNERS ─────────────────────────────────── */
-  .corner {
-    position: fixed; width: 50px; height: 50px; z-index: 5; pointer-events: none;
-  }
-  .corner::before, .corner::after { content: ''; position: absolute; background: var(--red); opacity: 0.35; }
-  .corner-tl { top: 16px; left: 16px; }
-  .corner-br { bottom: 16px; right: 16px; }
-  .corner-tl::before, .corner-br::before { width: 2px; height: 18px; }
-  .corner-tl::after,  .corner-br::after  { width: 18px; height: 2px; }
-  .corner-tl::before { top: 0; left: 0; }
-  .corner-tl::after  { top: 0; left: 0; }
-  .corner-br::before { bottom: 0; right: 0; }
-  .corner-br::after  { bottom: 0; right: 0; }
+        /* Glass Card */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
 
-  /* ── LAYOUT ──────────────────────────────────── */
-  .page {
-    position: relative; z-index: 10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 48px 20px 80px;
-    gap: 0;
-  }
+        .input-group { margin-bottom: 24px; }
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-  /* ── HEADER ──────────────────────────────────── */
-  .header {
-    text-align: center;
-    margin-bottom: 40px;
-    animation: fadeDown 0.7s cubic-bezier(0.16,1,0.3,1) both;
-  }
-  .header-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--red-dim);
-    border: 1px solid var(--border-red);
-    padding: 5px 14px;
-    border-radius: 2px;
-    font-size: 10px;
-    letter-spacing: 3px;
-    color: var(--red);
-    margin-bottom: 16px;
-  }
-  .dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; box-shadow: 0 0 8px var(--red); animation: blink 1.4s step-end infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
+        /* Elements Styling */
+        select, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        select:focus, textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
 
-  .header h1 {
-    font-family: var(--display);
-    font-size: clamp(32px, 7vw, 60px);
-    font-weight: 800;
-    letter-spacing: -2px;
-    line-height: 1;
-    color: #fff;
-    text-shadow: 0 0 40px rgba(255,45,45,0.2);
-  }
-  .header h1 span { color: var(--red); }
+        textarea {
+            height: 250px;
+            resize: none;
+            font-size: 13px;
+            line-height: 1.6;
+        }
 
-  .header-sub {
-    margin-top: 10px;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 1px;
-  }
+        /* Button */
+        .btn-obfuscate {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-obfuscate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px var(--accent-glow);
+            filter: brightness(1.1);
+        }
+        .btn-obfuscate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-  /* ── MAIN CARD ───────────────────────────────── */
-  .card {
-    width: min(700px, 100%);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 1px solid var(--border-red);
-    animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.15s both;
-  }
+        /* Result Area */
+        #resultContainer {
+            margin-top: 24px;
+            display: none;
+            animation: slideUp 0.5s ease-out;
+        }
+        .result-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .result-header span {
+            color: var(--success);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .loader-text {
+            background: rgba(0,0,0,0.4);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            color: var(--success);
+        }
+        .copy-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
 
-  .card-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(255,45,45,0.04);
-  }
-  .bar-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .bar-dot.r { background: #ff5f57; }
-  .bar-dot.y { background: #ffbd2e; }
-  .bar-dot.g { background: #28ca41; }
-  .bar-label {
-    margin-left: 4px;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 1px;
-  }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-  .card-body { padding: 20px; }
-
-  .field-label {
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--muted);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
-
-  /* Dropdown Styling */
-  .preset-select {
-    width: 100%;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    padding: 10px;
-    margin-bottom: 20px;
-    outline: none;
-    cursor: pointer;
-  }
-  .preset-select option { background: #050508; }
-
-  textarea {
-    width: 100%;
-    height: 220px;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid var(--border);
-    border-left: 2px solid rgba(255,45,45,0.25);
-    color: var(--green);
-    font-family: var(--mono);
-    font-size: 12.5px;
-    line-height: 1.7;
-    padding: 14px 16px;
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s;
-    caret-color: var(--green);
-  }
-  textarea::placeholder { color: rgba(45,255,142,0.2); }
-  textarea:focus {
-    border-color: rgba(45,255,142,0.3);
-    border-left-color: var(--green);
-    box-shadow: inset 0 0 30px rgba(45,255,142,0.03);
-  }
-
-  /* ── BUTTON ──────────────────────────────────── */
-  .btn-wrap { margin-top: 14px; }
-  button {
-    position: relative;
-    background: var(--red);
-    color: #fff;
-    border: none;
-    padding: 12px 28px;
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    overflow: hidden;
-    transition: background 0.2s, box-shadow 0.2s;
-  }
-  button::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
-    transform: translateX(-100%);
-    transition: transform 0.4s;
-  }
-  button:hover { background: #e02020; box-shadow: 0 0 20px var(--red-glow); }
-  button:hover::before { transform: translateX(100%); }
-  button:active { transform: scale(0.98); }
-  button:disabled { background: rgba(255,45,45,0.3); cursor: not-allowed; }
-
-  .loading-dots::after {
-    content: '';
-    animation: dots 1.2s steps(4, end) infinite;
-  }
-  @keyframes dots {
-    0%   { content: ''; }
-    25%  { content: '.'; }
-    50%  { content: '..'; }
-    75%  { content: '...'; }
-    100% { content: ''; }
-  }
-
-  /* ── RESULT BOX ──────────────────────────────── */
-  .result-section {
-    width: min(700px, 100%);
-    margin-top: 16px;
-    animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
-  }
-  .result-card {
-    background: var(--green-dim);
-    border: 1px solid rgba(45,255,142,0.2);
-    border-left: 3px solid var(--green);
-  }
-  .result-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-  }
-  .result-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--green);
-    text-transform: uppercase;
-  }
-  .copy-btn {
-    background: rgba(45,255,142,0.1);
-    border: 1px solid rgba(45,255,142,0.25) !important;
-    color: var(--green) !important;
-    padding: 5px 14px !important;
-    font-size: 10px !important;
-  }
-  .result-code {
-    padding: 16px;
-    font-size: 12px;
-    color: var(--green);
-    word-break: break-all;
-    line-height: 1.7;
-    background: rgba(0,0,0,0.3);
-  }
-  .error-card {
-    background: var(--red-dim);
-    border: 1px solid var(--border-red);
-    border-left: 3px solid var(--red);
-    padding: 14px 18px;
-    font-size: 12px;
-    color: rgba(255,100,100,0.9);
-  }
-
-  /* ── STATUS BAR ──────────────────────────────── */
-  .statusbar {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 20;
-    padding: 6px 20px;
-    background: rgba(5,5,8,0.95);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
-
-  @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-</style>
+        /* Loader Animation */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
-<div class="grid-bg"></div>
-<div class="scanlines"></div>
-<div class="vignette"></div>
-<div class="corner corner-tl"></div>
-<div class="corner corner-br"></div>
-
-<div class="page">
-  <div class="header">
-    <div class="header-badge"><span class="dot"></span> SYSTEM ONLINE</div>
-    <h1>RBX<span>.</span>LOADER</h1>
-    <div class="header-sub">LUA OBFUSCATOR // PROMETHEUS ENGINE // PROTECTED</div>
-  </div>
-
-  <div class="card">
-    <div class="card-bar">
-      <span class="bar-dot r"></span><span class="bar-dot y"></span><span class="bar-dot g"></span>
-      <span class="bar-label">script_input.lua</span>
+<div class="container">
+    <div class="header">
+        <h1>RBX.Loader</h1>
+        <p>Advanced Prometheus Obfuscator</p>
     </div>
-    <div class="card-body">
-      <div class="field-label">// Pilih Preset Obfuskasi</div>
-      <select id="presetSelect" class="preset-select">
-        <option value="Weak">Weak (Cepat)</option>
-        <option value="Medium" selected>Medium (Rekomendasi)</option>
-        <option value="Strong">Strong (Kuat)</option>
-        <option value="Gacor">Gacor (Custom Ultra)</option>
-      </select>
 
-      <div class="field-label">// Paste script Lua kamu di bawah</div>
-      <textarea id="scriptInput" placeholder='-- print("Hello World")'></textarea>
-      <div class="btn-wrap">
-        <button id="obfBtn" onclick="obfuscate()">▶ Obfuscate &amp; Get Loader</button>
-      </div>
+    <div class="glass-card">
+        <div class="input-group">
+            <label>1. Select Protection Level</label>
+            <select id="preset">
+                <option value="Weak">Weak — Fast & Simple</option>
+                <option value="Medium" selected>Medium — Balanced (Recommended)</option>
+                <option value="Strong">Strong — Heavy Protection</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>2. Paste Your Lua Script</label>
+            <textarea id="scriptInput" placeholder="-- Enter your source code here..."></textarea>
+        </div>
+
+        <button id="obfBtn" class="btn-obfuscate" onclick="handleObfuscate()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btnText">Protect Script</span>
+        </button>
+
+        <div id="resultContainer">
+            <div class="result-box">
+                <div class="result-header">
+                    <span>✓ Obfuscation Successful</span>
+                    <button class="copy-btn" onclick="copyToClipboard()">Copy Loader</button>
+                </div>
+                <div class="loader-text" id="loaderOutput"></div>
+            </div>
+        </div>
     </div>
-  </div>
-
-  <div id="resultSection" class="result-section" style="display:none;"></div>
-</div>
-
-<div class="statusbar">
-  <div style="display:flex; gap:20px;">
-    <div style="display:flex; align-items:center; gap:6px;"><span class="status-dot"></span><span>SERVER ONLINE</span></div>
-    <div>ENGINE: PROMETHEUS</div>
-  </div>
-  <div id="clock">--:--:-- UTC</div>
 </div>
 
 <script>
-  function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toISOString().replace('T',' ').slice(0,19) + ' UTC';
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
+    let currentLoader = "";
 
-  async function obfuscate() {
-    const script = document.getElementById('scriptInput').value.trim();
-    const preset = document.getElementById('presetSelect').value;
-    const btn    = document.getElementById('obfBtn');
-    const result = document.getElementById('resultSection');
+    async function handleObfuscate() {
+        const script = document.getElementById('scriptInput').value.trim();
+        const preset = document.getElementById('preset').value;
+        const btn = document.getElementById('obfBtn');
+        const spinner = document.getElementById('spinner');
+        const btnText = document.getElementById('btnText');
+        const resultCont = document.getElementById('resultContainer');
 
-    if (!script) { showError('Script tidak boleh kosong.'); return; }
+        if (!script) return alert("Please enter a script!");
 
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loading-dots">MEMPROSES</span>';
-    result.style.display = 'none';
+        // UI Loading State
+        btn.disabled = true;
+        spinner.style.display = "block";
+        btnText.innerText = "Processing...";
+        resultCont.style.display = "none";
 
-    try {
-      const response = await fetch('/api/obfuscate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script, preset })
-      });
+        try {
+            const response = await fetch('/api/obfuscate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ script, preset })
+            });
 
-      const data = await response.json();
-      if (data.success) { showSuccess(data.loader); } 
-      else { showError(data.error || 'Terjadi kesalahan.'); }
-    } catch (err) { showError('Gagal terhubung ke server.'); }
+            const data = await response.json();
 
-    btn.disabled = false;
-    btn.innerHTML = '▶ Obfuscate &amp; Get Loader';
-  }
+            if (data.success) {
+                currentLoader = data.loader;
+                document.getElementById('loaderOutput').innerText = data.loader;
+                resultCont.style.display = "block";
+            } else {
+                alert("Error: " + data.error);
+            }
+        } catch (err) {
+            alert("Connection error to server.");
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = "none";
+            btnText.innerText = "Protect Script";
+        }
+    }
 
-  function showSuccess(loader) {
-    const el = document.getElementById('resultSection');
-    el.innerHTML = `
-      <div class="result-card">
-        <div class="result-header">
-          <div class="result-title">✓ OBFUSKASI BERHASIL</div>
-          <button class="copy-btn" onclick="copyLoader()">COPY</button>
-        </div>
-        <div class="result-code" id="loaderCode">${escapeHtml(loader)}</div>
-      </div>`;
-    el.style.display = 'block';
-    window._loader = loader;
-  }
-
-  function showError(msg) {
-    const el = document.getElementById('resultSection');
-    el.innerHTML = `<div class="error-card">[ERR] ${escapeHtml(msg)}</div>`;
-    el.style.display = 'block';
-  }
-
-  function copyLoader() {
-    navigator.clipboard.writeText(window._loader).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'COPIED!';
-      setTimeout(() => btn.textContent = 'COPY', 1500);
-    });
-  }
-
-  function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+    function copyToClipboard() {
+        navigator.clipboard.writeText(currentLoader).then(() => {
+            const copyBtn = document.querySelector('.copy-btn');
+            copyBtn.innerText = "Copied!";
+            copyBtn.style.background = "#059669";
+            setTimeout(() => {
+                copyBtn.innerText = "Copy Loader";
+                copyBtn.style.background = "#10b981";
+            }, 2000);
+        });
+    }
 </script>
+
 </body>
 </html>
