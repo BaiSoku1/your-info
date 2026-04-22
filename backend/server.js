@@ -145,8 +145,9 @@ app.post('/api/obfuscate', async (req, res) => {
 app.get('/Scripts', (req, res) => {
     const userAgent = req.headers['user-agent'] || '';
 
-    // Blokir semua request yang bukan dari Roblox
-    if (!userAgent.includes('Roblox')) {
+    // Blokir request yang berasal dari browser biasa
+    const isBrowser = /Mozilla|Chrome|Safari|Firefox|Opera|Edge|MSIE/i.test(userAgent);
+    if (isBrowser) {
         return res.status(403).sendFile(path.join(__dirname, 'public', '403.html'));
     }
 
