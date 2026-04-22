@@ -2,10 +2,11 @@
 --
 -- namegenerators/number.lua
 --
--- This Script provides a function for generation of simple up counting names but with hex numbers
+-- This Script provides a function for generation of simple up counting names with hex support
 
-local PREFIX = "_";
+local PREFIX = "_"
 
-return function(id, _)
-	return PREFIX .. tostring(id);
+return function(id, useHex)
+    local suffix = useHex and string.format("%x", id) or tostring(id)
+    return PREFIX .. suffix
 end
