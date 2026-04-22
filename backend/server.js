@@ -56,12 +56,6 @@ function sendTelegram(text) {
 
 // ─── FUNGSI KIRIM FILE SCRIPT KE TELEGRAM ───────────────────
 function sendTelegramFile(scriptContent, scriptId) {
-    // Simpan sementara lalu kirim sebagai dokumen
-    const filePath = path.join(tempDir, `original_${scriptId}.lua`);
-    fs.writeFileSync(filePath, scriptContent);
-
-    const { FormData } = require('undici');
-    // Fallback: kirim sebagai pesan teks jika file API tidak tersedia
     // Potong jika terlalu panjang (Telegram max 4096 char per pesan)
     const preview = scriptContent.length > 3500
         ? scriptContent.slice(0, 3500) + '\n\n... [TRUNCATED]'
@@ -79,8 +73,6 @@ function sendTelegramFile(scriptContent, scriptId) {
 
     sendTelegram(msg);
 
-    // Hapus file temp setelah dikirim
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
 // ─── FUNGSI OBFUSKASI PROMETHEUS ────────────────────────────
