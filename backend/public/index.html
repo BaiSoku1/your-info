@@ -97,7 +97,8 @@
   /* Controls Section */
   .controls-bar {
     display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
-    background: var(--bg2); padding: 16px; border: 1px solid var(--border); border-radius: var(--radius);
+    justify-content: space-between; /* <-- Ini bikin item rata ujung kiri & kanan */
+    background: var(--bg2); padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius);
   }
 
   .control-group { display: flex; align-items: center; gap: 12px; }
@@ -160,17 +161,21 @@
   textarea:focus { background: rgba(99,255,180,0.01); }
 
   /* Action buttons */
-  .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .action-row { 
+    display: flex; width: 100%; margin-bottom: 20px; 
+  }
 
   .btn-main {
-    font-family: var(--font-ui); font-size: 14px; font-weight: 700;
-    padding: 11px 28px; background: var(--accent); color: #040d08;
+    font-family: var(--font-ui); font-size: 15px; font-weight: 700;
+    padding: 16px; background: var(--accent); color: #040d08;
     border: none; border-radius: var(--radius); cursor: pointer;
-    transition: all 0.15s; letter-spacing: 0.3px; display: flex; align-items: center; gap: 8px;
+    transition: all 0.15s; letter-spacing: 0.5px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; /* <-- Ini bikin tombolnya panjang full dari kiri ke kanan */
   }
-  .btn-main:hover { background: #80ffc4; transform: translateY(-1px); }
-  .btn-main:active { transform: scale(0.98) translateY(0); }
-  .btn-main:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; }
+  .btn-main:hover { background: #80ffc4; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(99,255,180,0.2); }
+  .btn-main:active { transform: scale(0.99) translateY(0); }
+  .btn-main:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
   /* Loader Animation */
   .spinner {
@@ -220,7 +225,7 @@
   </header>
 
   <div class="hero">
-    <h1>Advanced <span class="grad">Lua Protection</span><br>With Remote Loader</h1>
+    <h1>Lua <span class="grad">Obfuscator</span><br>With Remote Loader</h1>
     <p>// Amankan skripmu dengan obfuskasi level server dan lindungi distribusi skripmu dengan loadstring jarak jauh secara otomatis.</p>
   </div>
 
@@ -275,7 +280,7 @@
       <path d="M8 1.5L2.5 3.5V8C2.5 11.04 4.91 13.85 8 14.5C11.09 13.85 13.5 11.04 13.5 8V3.5L8 1.5Z" stroke="#63ffb4" stroke-width="1" fill="none"/>
       <path d="M5.5 8L7 9.5L10.5 6" stroke="#63ffb4" stroke-width="1" stroke-linecap="round"/>
     </svg>
-    <span>Script Anda diproses dengan aman di server dan akan dikirimkan salinannya melalui Bot Telegram untuk pencatatan log. Tautan loadstring dilindungi oleh sistem anti-skid.</span>
+    <span>Script Anda diproses dengan aman. Tautan loadstring dilindungi oleh sistem anti-skid.</span>
   </div>
 
   <footer>
