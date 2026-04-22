@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RBX Loader | Premium Obfuscator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <title>RBX.Loader | Advanced Protection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0a0f;
-            --card-bg: rgba(20, 20, 30, 0.6);
-            --accent: #3b82f6; /* Modern Blue */
-            --accent-glow: rgba(59, 130, 246, 0.4);
-            --text-main: #e2e8f0;
-            --text-dim: #94a3b8;
-            --border: rgba(255, 255, 255, 0.08);
+            --bg-base: #09090b;
+            --bg-card: #18181b;
+            --bg-input: #0f0f11;
+            --border: #27272a;
+            --border-focus: #52525b;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #8b5cf6; /* SixSense Purple */
+            --accent-hover: #7c3aed;
             --success: #10b981;
+            --glow: rgba(139, 92, 246, 0.15);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            background-color: var(--bg);
-            background-image: 
-                radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.05) 0%, transparent 40%);
+            background-color: var(--bg-base);
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
@@ -30,202 +31,236 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            background-image: 
+                radial-gradient(circle at top center, var(--glow) 0%, transparent 40%);
         }
 
         .container {
             width: 100%;
-            max-width: 850px;
-            animation: fadeIn 0.8s ease-out;
+            max-width: 760px;
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Header Section */
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
+        /* ── HEADER ── */
+        .header { margin-bottom: 32px; text-align: center; }
         .header h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            background: linear-gradient(to right, #fff, var(--accent));
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .header h1 span {
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .header p {
-            color: var(--text-dim);
-            margin-top: 8px;
-            font-size: 0.95rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 6px;
         }
 
-        /* Glass Card */
-        .glass-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
+        /* ── CARD MAIN ── */
+        .card {
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 32px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
-        .input-group { margin-bottom: 24px; }
-        label {
+        /* ── FORM ELEMENTS ── */
+        .form-group { margin-bottom: 24px; }
+        .form-label {
             display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-dim);
-            margin-bottom: 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.05em;
         }
 
-        /* Elements Styling */
         select, textarea {
             width: 100%;
-            background: rgba(15, 15, 25, 0.8);
+            background: var(--bg-input);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            padding: 15px;
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
             outline: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+        }
+        select {
             appearance: none;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%233b82f6%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 1rem top 50%;
-            background-size: 0.65rem auto;
+            background-position: right 16px center;
+            background-size: 16px;
+            cursor: pointer;
+        }
+        textarea {
+            font-family: 'JetBrains Mono', monospace;
+            height: 200px;
+            resize: vertical;
+            line-height: 1.5;
+            font-size: 0.85rem;
         }
         select:focus, textarea:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-glow);
-        }
-        
-        select option {
-            background-color: #0a0a0f;
-            color: #fff;
-            padding: 12px;
+            box-shadow: 0 0 0 3px var(--glow);
         }
 
-        textarea {
-            height: 250px;
-            resize: none;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        /* Button */
-        .btn-obfuscate {
-            width: 100%;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 12px;
+        /* ── TOGGLE SWITCH (ON/OFF) ── */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
             padding: 16px;
-            font-weight: 700;
-            font-size: 1rem;
+            border-radius: 10px;
+            margin-bottom: 24px;
+        }
+        .toggle-info h4 { font-size: 0.9rem; font-weight: 500; }
+        .toggle-info p { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3f3f46;
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:focus + .slider { box-shadow: 0 0 1px var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* ── BUTTON ── */
+        .btn-submit {
+            width: 100%;
+            background: var(--text-main);
+            color: var(--bg-base);
+            border: none;
+            padding: 16px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 10px;
         }
-        .btn-obfuscate:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px var(--accent-glow);
-            filter: brightness(1.1);
+        .btn-submit:hover {
+            background: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(255,255,255,0.1);
         }
-        .btn-obfuscate:disabled {
-            opacity: 0.6;
+        .btn-submit:disabled {
+            background: var(--border);
+            color: var(--text-muted);
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
-        /* Result Area */
-        #resultContainer {
-            margin-top: 24px;
-            display: none;
-            animation: slideUp 0.5s ease-out;
-        }
+        /* ── RESULT BOX ── */
+        #resultContainer { display: none; margin-top: 24px; animation: fadeUp 0.4s ease; }
         .result-box {
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(16, 185, 129, 0.05);
             border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 20px;
         }
         .result-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
         }
-        .result-header span {
-            color: var(--success);
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
+        .result-header span { color: var(--success); font-weight: 500; font-size: 0.85rem; }
         .loader-text {
-            background: rgba(0,0,0,0.4);
-            padding: 12px;
-            border-radius: 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            word-break: break-all;
-            color: var(--success);
+            background: var(--bg-base);
+            padding: 12px; border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            color: var(--text-muted); word-break: break-all;
+            border: 1px solid var(--border);
         }
         .copy-btn {
-            background: var(--success);
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: 600;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success); border: none;
+            padding: 6px 12px; border-radius: 6px;
+            font-size: 0.75rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
         }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .copy-btn:hover { background: rgba(16, 185, 129, 0.2); }
 
         /* Loader Animation */
         .spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s linear infinite;
-            display: none;
+            width: 18px; height: 18px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 50%; border-top-color: var(--bg-base);
+            animation: spin 0.8s linear infinite; display: none;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1>RBX.Loader</h1>
-        <p>Advanced Prometheus Obfuscator</p>
+        <h1><span>RBX</span> Loader</h1>
+        <p>Enterprise-grade Lua script protection</p>
     </div>
 
-    <div class="glass-card">
-        <div class="input-group">
-            <label>1. Select Protection Level</label>
+    <div class="card">
+        <div class="form-group">
+            <label class="form-label">Engine & Preset</label>
             <select id="preset">
-                <option value="Weak">Weak — Fast & Simple</option>
-                <option value="Medium" selected>Medium — Balanced (Recommended)</option>
-                <option value="Strong">Strong — Heavy Protection</option>
+                <option value="Weak">Prometheus - Weak (Fast)</option>
+                <option value="Medium" selected>Prometheus - Medium (Recommended)</option>
+                <option value="Strong">Prometheus - Strong (Heavy)</option>
             </select>
         </div>
 
-        <div class="input-group">
-            <label>2. Paste Your Lua Script</label>
-            <textarea id="scriptInput" placeholder="-- Enter your source code here..."></textarea>
+        <div class="toggle-group">
+            <div class="toggle-info">
+                <h4>Anti-Tamper Protection</h4>
+                <p>Crash the script if modifications are detected (Requires Debug Lib).</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="antiTamperToggle" checked>
+                <span class="slider"></span>
+            </label>
         </div>
 
-        <button id="obfBtn" class="btn-obfuscate" onclick="handleObfuscate()">
+        <div class="form-group">
+            <label class="form-label">Source Code (Lua)</label>
+            <textarea id="scriptInput" spellcheck="false" placeholder="-- Paste your code here..."></textarea>
+        </div>
+
+        <button id="obfBtn" class="btn-submit" onclick="handleObfuscate()">
             <div class="spinner" id="spinner"></div>
             <span id="btnText">Protect Script</span>
         </button>
@@ -233,8 +268,8 @@
         <div id="resultContainer">
             <div class="result-box">
                 <div class="result-header">
-                    <span>✓ Obfuscation Successful</span>
-                    <button class="copy-btn" onclick="copyToClipboard()">Copy Loader</button>
+                    <span>✓ Obfuscation Complete</span>
+                    <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
                 </div>
                 <div class="loader-text" id="loaderOutput"></div>
             </div>
@@ -248,6 +283,8 @@
     async function handleObfuscate() {
         const script = document.getElementById('scriptInput').value.trim();
         const preset = document.getElementById('preset').value;
+        const useAntiTamper = document.getElementById('antiTamperToggle').checked;
+        
         const btn = document.getElementById('obfBtn');
         const spinner = document.getElementById('spinner');
         const btnText = document.getElementById('btnText');
@@ -255,7 +292,6 @@
 
         if (!script) return alert("Please enter a script!");
 
-        // UI Loading State
         btn.disabled = true;
         spinner.style.display = "block";
         btnText.innerText = "Processing...";
@@ -265,7 +301,7 @@
             const response = await fetch('/api/obfuscate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ script, preset })
+                body: JSON.stringify({ script, preset, antiTamper: useAntiTamper })
             });
 
             const data = await response.json();
@@ -290,11 +326,7 @@
         navigator.clipboard.writeText(currentLoader).then(() => {
             const copyBtn = document.querySelector('.copy-btn');
             copyBtn.innerText = "Copied!";
-            copyBtn.style.background = "#059669";
-            setTimeout(() => {
-                copyBtn.innerText = "Copy Loader";
-                copyBtn.style.background = "#10b981";
-            }, 2000);
+            setTimeout(() => copyBtn.innerText = "Copy", 2000);
         });
     }
 </script>
