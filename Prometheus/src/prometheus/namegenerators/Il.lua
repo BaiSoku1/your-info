@@ -9,23 +9,19 @@ local MAX_INITIAL_CHARACTERS = 10
 
 local util = require("prometheus.util")
 
-local offset = 0
 local VarDigits = util.chararray("Il1")
 local VarStartDigits = util.chararray("Il")
 
+local offset = 0
+
 local function generateName(id)
-    id = id + offset
-    local parts = {}
-    local d = id % #VarStartDigits + 1
-    id = math.floor(id / #VarStartDigits)
-    parts[1] = VarStartDigits[d]
+    local num = id + offset
+    local parts = { VarStartDigits[num % #VarStartDigits + 1] }
+    num = math.floor(num / #VarStartDigits)
     
-    local idx = 2
-    while id > 0 do
-        local e = id % #VarDigits + 1
-        id = math.floor(id / #VarDigits)
-        parts[idx] = VarDigits[e]
-        idx = idx + 1
+    while num > 0 do
+        table.insert(parts, 1, VarDigits[num % #VarDigits + 1])
+        num = math.floor(num / #VarDigits)
     end
     
     return table.concat(parts)
@@ -34,7 +30,10 @@ end
 local function prepare()
     util.shuffle(VarDigits)
     util.shuffle(VarStartDigits)
-    offset = math.random(3 ^ MIN_CHARACTERS, 3 ^ MAX_INITIAL_CHARACTERS)
+    -- Ensure minimum length by setting offset appropriately
+    local minVal = #VarStartDigits * (#VarDigits ^ (MIN_CHARACTERS - 1))
+    local maxVal = #VarStartDigits * (#VarDigits ^ (MAX_INITIAL_CHARACTERS - 1))
+    offset = math.random(minVal, maxVal)
 end
 
 return { generateName = generateName, prepare = prepare }
