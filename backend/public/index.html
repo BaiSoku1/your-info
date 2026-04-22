@@ -1,353 +1,201 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RBX.Loader — Advanced Obfuscator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0a0a0f;
-    --bg2: #10101a;
-    --bg3: #161625;
-    --border: rgba(255,255,255,0.07);
-    --border-hi: rgba(99,255,180,0.3);
-    --accent: #63ffb4;
-    --accent2: #4de3ff;
-    --text: #e8e8f0;
-    --text-muted: #6b6b85;
-    --text-dim: #3a3a55;
-    --danger: #ff5b5b;
-    --radius: 10px;
-    --font-mono: 'Space Mono', monospace;
-    --font-ui: 'Syne', sans-serif;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBX.Loader | Advanced Protection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #09090b; --bg-card: #18181b; --bg-input: #0f0f11;
+            --border: #27272a; --text-main: #f4f4f5; --text-muted: #a1a1aa;
+            --accent: #8b5cf6; --success: #10b981; --glow: rgba(139, 92, 246, 0.15);
+            --font-mono: 'JetBrains Mono', monospace; --font-ui: 'Inter', sans-serif;
+        }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-base); color: var(--text-main); font-family: var(--font-ui);
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
+            padding: 20px; background-image: radial-gradient(circle at top center, var(--glow) 0%, transparent 40%);
+        }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-ui);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+        .container { width: 100%; max-width: 800px; animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 
-  /* Background grid */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(99,255,180,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99,255,180,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none; z-index: 0;
-  }
+        /* HEADER */
+        .header { margin-bottom: 32px; text-align: center; }
+        .header h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.05em; margin-bottom: 6px; }
+        .header h1 span { background: linear-gradient(135deg, #a78bfa, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: var(--text-muted); font-size: 0.9rem; }
 
-  /* Glow orb */
-  body::after {
-    content: '';
-    position: fixed; top: -200px; right: -100px;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(99,255,180,0.06) 0%, transparent 70%);
-    pointer-events: none; z-index: 0;
-  }
+        /* CONTROLS (Rata ujung ke ujung) */
+        .controls-bar {
+            display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; /* <--- Kunci biar rata */
+            background: var(--bg-card); padding: 16px 20px; border: 1px solid var(--border); border-radius: 12px;
+        }
+        .control-group { display: flex; align-items: center; gap: 12px; }
+        .control-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
 
-  .page { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+        select {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text-main); font-family: var(--font-mono); font-size: 12px;
+            padding: 10px 14px; outline: none; cursor: pointer; transition: 0.2s;
+        }
+        select:focus { border-color: var(--accent); }
 
-  /* Header */
-  header {
-    padding: 32px 0 48px;
-    display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid var(--border); margin-bottom: 48px;
-  }
+        /* TOGGLE */
+        .switch-wrapper { display: flex; align-items: center; gap: 10px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-input); transition: .3s; border: 1px solid var(--border); border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: rgba(139, 92, 246, 0.2); border-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); background-color: var(--accent); }
 
-  .logo { display: flex; align-items: center; gap: 12px; }
-  .logo-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
-  }
-  .logo-icon svg { width: 20px; height: 20px; }
-  .logo-name { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
-  .logo-name span { color: var(--accent); }
+        /* EDITORS */
+        .editors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        @media (max-width: 680px) { .editors { grid-template-columns: 1fr; } }
 
-  .header-badge {
-    font-family: var(--font-mono); font-size: 11px; padding: 4px 10px;
-    border: 1px solid rgba(99,255,180,0.25); border-radius: 20px;
-    color: var(--accent); background: rgba(99,255,180,0.05);
-  }
+        .editor-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+        .editor-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+        .editor-title { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .editor-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+        .editor-dot.out { background: var(--success); }
+        .editor-action { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: all 0.15s; }
+        .editor-action:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
 
-  /* Hero */
-  .hero { margin-bottom: 48px; }
-  .hero h1 {
-    font-size: clamp(32px, 5vw, 56px); font-weight: 800; line-height: 1.1;
-    letter-spacing: -1.5px; margin-bottom: 16px;
-  }
-  .hero h1 .grad {
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .hero p {
-    font-size: 13px; color: var(--text-muted); max-width: 520px;
-    line-height: 1.7; font-family: var(--font-mono);
-  }
+        textarea {
+            flex: 1; width: 100%; min-height: 280px; background: transparent; border: none; outline: none; padding: 16px;
+            font-family: var(--font-mono); font-size: 12.5px; color: var(--text-main); resize: vertical; line-height: 1.6;
+        }
+        textarea::placeholder { color: #3f3f46; }
 
-  /* Controls Section */
-  .controls-bar {
-    display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
-    justify-content: space-between; /* <-- Ini bikin item rata ujung kiri & kanan */
-    background: var(--bg2); padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius);
-  }
+        /* BUTTON MAIN (100% Full width) */
+        .action-row { width: 100%; margin-bottom: 20px; }
+        .btn-main {
+            width: 100%; font-family: var(--font-ui); font-size: 15px; font-weight: 600; padding: 16px;
+            background: var(--text-main); color: var(--bg-base); border: none; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-main:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
+        .btn-main:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
-  .control-group { display: flex; align-items: center; gap: 12px; }
-  .control-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
-
-  select {
-    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--text); font-family: var(--font-mono); font-size: 12px;
-    padding: 8px 12px; outline: none; cursor: pointer; transition: 0.2s;
-  }
-  select:focus { border-color: var(--accent); }
-
-  /* Toggle Switch */
-  .switch-wrapper { display: flex; align-items: center; gap: 10px; }
-  .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--bg3); transition: .3s; border: 1px solid var(--border); border-radius: 20px;
-  }
-  .slider:before {
-    position: absolute; content: ""; height: 12px; width: 12px;
-    left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .3s; border-radius: 50%;
-  }
-  input:checked + .slider { background-color: rgba(99,255,180,0.2); border-color: var(--accent); }
-  input:checked + .slider:before { transform: translateX(20px); background-color: var(--accent); }
-
-  /* Editor area */
-  .editors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-  @media (max-width: 680px) { .editors { grid-template-columns: 1fr; } }
-
-  .editor-panel {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
-  }
-  .editor-head {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg3);
-  }
-  .editor-title {
-    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .editor-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-  .editor-dot.out { background: var(--accent2); }
-
-  .editor-action {
-    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
-    background: none; border: none; cursor: pointer; padding: 3px 8px;
-    border-radius: 4px; transition: all 0.15s;
-  }
-  .editor-action:hover { background: rgba(255,255,255,0.05); color: var(--text); }
-
-  textarea {
-    flex: 1; width: 100%; min-height: 280px; background: transparent; border: none;
-    outline: none; padding: 16px; font-family: var(--font-mono); font-size: 12px;
-    color: var(--text); resize: vertical; line-height: 1.7; caret-color: var(--accent);
-  }
-  textarea::placeholder { color: var(--text-dim); }
-  textarea:focus { background: rgba(99,255,180,0.01); }
-
-  /* Action buttons */
-  .action-row { 
-    display: flex; width: 100%; margin-bottom: 20px; 
-  }
-
-  .btn-main {
-    font-family: var(--font-ui); font-size: 15px; font-weight: 700;
-    padding: 16px; background: var(--accent); color: #040d08;
-    border: none; border-radius: var(--radius); cursor: pointer;
-    transition: all 0.15s; letter-spacing: 0.5px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; /* <-- Ini bikin tombolnya panjang full dari kiri ke kanan */
-  }
-  .btn-main:hover { background: #80ffc4; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(99,255,180,0.2); }
-  .btn-main:active { transform: scale(0.99) translateY(0); }
-  .btn-main:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
-
-  /* Loader Animation */
-  .spinner {
-      width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3);
-      border-radius: 50%; border-top-color: #040d08;
-      animation: spin 0.8s linear infinite; display: none;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Footer note */
-  .safe-note {
-    display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px;
-    background: rgba(99,255,180,0.04); border: 1px solid rgba(99,255,180,0.1);
-    border-radius: var(--radius); font-family: var(--font-mono); font-size: 11px;
-    color: var(--text-muted); line-height: 1.6; margin-bottom: 40px;
-  }
-  .safe-note svg { flex-shrink: 0; margin-top: 1px; }
-
-  footer {
-    border-top: 1px solid var(--border); padding-top: 24px;
-    display: flex; justify-content: space-between; align-items: center;
-    font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
-  }
-
-  /* Animate in */
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-  .hero { animation: fadeUp 0.5s ease both; }
-  .controls-bar { animation: fadeUp 0.5s 0.1s ease both; }
-  .editors { animation: fadeUp 0.5s 0.15s ease both; }
-  .action-row { animation: fadeUp 0.5s 0.2s ease both; }
-</style>
+        /* FOOTER INFO */
+        .safe-note { display: flex; gap: 10px; padding: 14px 16px; background: rgba(139, 92, 246, 0.05); border: 1px dashed rgba(139, 92, 246, 0.2); border-radius: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+        
+        .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-radius: 50%; border-top-color: var(--bg-base); animation: spin 0.8s linear infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
-<div class="page">
 
-  <header>
-    <div class="logo">
-      <div class="logo-icon">
-        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 2L3 5.5V10.5C3 14.09 6.13 17.36 10 18C13.87 17.36 17 14.09 17 10.5V5.5L10 2Z" fill="#040d08"/>
-          <path d="M7 10L9 12L13 8" stroke="#63ffb4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <span class="logo-name">RBX<span>.Loader</span></span>
-    </div>
-    <div class="header-badge">Prometheus Engine</div>
-  </header>
-
-  <div class="hero">
-    <h1>Lua <span class="grad">Obfuscator</span><br>With Remote Loader</h1>
-    <p>// Amankan skripmu dengan obfuskasi level server dan lindungi distribusi skripmu dengan loadstring jarak jauh secara otomatis.</p>
-  </div>
-
-  <div class="controls-bar">
-    <div class="control-group">
-      <span class="control-label">Preset //</span>
-      <select id="preset">
-        <option value="Weak">Weak (Fast)</option>
-        <option value="Medium" selected>Medium (Recommended)</option>
-        <option value="Strong">Strong (Heavy)</option>
-      </select>
+<div class="container">
+    <div class="header">
+        <h1><span>RBX</span> Loader</h1>
+        <p>Enterprise-grade Remote Protection</p>
     </div>
 
-    <div class="control-group">
-      <span class="control-label">Anti-Tamper //</span>
-      <div class="switch-wrapper">
-        <label class="switch">
-          <input type="checkbox" id="antiTamperToggle" checked>
-          <span class="slider"></span>
-        </label>
-        <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">Crash on edit</span>
-      </div>
+    <div class="controls-bar">
+        <div class="control-group">
+            <span class="control-label">Preset //</span>
+            <select id="preset">
+                <option value="Weak">Weak (Fast)</option>
+                <option value="Medium" selected>Medium (Recommended)</option>
+                <option value="Strong">Strong (Heavy)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <span class="control-label">Anti-Tamper //</span>
+            <div class="switch-wrapper">
+                <label class="switch">
+                    <input type="checkbox" id="antiTamperToggle" checked>
+                    <span class="slider"></span>
+                </label>
+                <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">Crash on edit</span>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="editors">
-    <div class="editor-panel">
-      <div class="editor-head">
-        <div class="editor-title"><div class="editor-dot"></div>script_input.lua</div>
-        <button class="editor-action" onclick="document.getElementById('scriptInput').value=''">clear</button>
-      </div>
-      <textarea id="scriptInput" spellcheck="false" placeholder="-- Tempel kode Lua asli di sini..."></textarea>
+    <div class="editors">
+        <div class="editor-panel">
+            <div class="editor-head">
+                <div class="editor-title"><div class="editor-dot"></div>script_input.lua</div>
+                <button class="editor-action" onclick="document.getElementById('scriptInput').value=''">clear</button>
+            </div>
+            <textarea id="scriptInput" spellcheck="false" placeholder="-- Paste original Lua script here..."></textarea>
+        </div>
+        <div class="editor-panel">
+            <div class="editor-head">
+                <div class="editor-title"><div class="editor-dot out"></div>loader_output.txt</div>
+                <button class="editor-action" onclick="copyLoader()">copy loader</button>
+            </div>
+            <textarea id="loaderOutput" readonly placeholder="-- Remote loadstring will appear here..."></textarea>
+        </div>
     </div>
-    <div class="editor-panel">
-      <div class="editor-head">
-        <div class="editor-title"><div class="editor-dot out"></div>loader_output.txt</div>
-        <button class="editor-action" onclick="copyLoader()">copy loader</button>
-      </div>
-      <textarea id="loaderOutput" readonly placeholder="-- Hasil loadstring jarak jauh akan muncul di sini..."></textarea>
+
+    <div class="action-row">
+        <button id="obfBtn" class="btn-main" onclick="handleObfuscate()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btnText">Execute Obfuscation</span>
+        </button>
     </div>
-  </div>
 
-  <div class="action-row">
-    <button id="obfBtn" class="btn-main" onclick="handleObfuscate()">
-      <div class="spinner" id="spinner"></div>
-      <span id="btnText">Execute Obfuscation →</span>
-    </button>
-  </div>
-
-  <div class="safe-note">
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <path d="M8 1.5L2.5 3.5V8C2.5 11.04 4.91 13.85 8 14.5C11.09 13.85 13.5 11.04 13.5 8V3.5L8 1.5Z" stroke="#63ffb4" stroke-width="1" fill="none"/>
-      <path d="M5.5 8L7 9.5L10.5 6" stroke="#63ffb4" stroke-width="1" stroke-linecap="round"/>
-    </svg>
-    <span>Script Anda diproses dengan aman. Tautan loadstring dilindungi oleh sistem anti-skid.</span>
-  </div>
-
-  <footer>
-    <span>RBX.Loader — Prometheus API</span>
-    <span>Server: Node.js Backend</span>
-  </footer>
-
+    <div class="safe-note">
+        <span>INFO // Skrip dieksekusi di server tertutup. Loadstring API diproteksi sistem anti-skid. Log akan terekam ke Telegram administrator.</span>
+    </div>
 </div>
 
 <script>
-  let currentLoader = "";
+    let currentLoader = "";
 
-  async function handleObfuscate() {
-      const script = document.getElementById('scriptInput').value.trim();
-      const preset = document.getElementById('preset').value;
-      const useAntiTamper = document.getElementById('antiTamperToggle').checked;
-      
-      const btn = document.getElementById('obfBtn');
-      const spinner = document.getElementById('spinner');
-      const btnText = document.getElementById('btnText');
-      const loaderOut = document.getElementById('loaderOutput');
+    async function handleObfuscate() {
+        const script = document.getElementById('scriptInput').value.trim();
+        const preset = document.getElementById('preset').value;
+        const useAntiTamper = document.getElementById('antiTamperToggle').checked;
+        
+        const btn = document.getElementById('obfBtn');
+        const spinner = document.getElementById('spinner');
+        const btnText = document.getElementById('btnText');
+        const loaderOut = document.getElementById('loaderOutput');
 
-      if (!script) return alert("Error: Harap masukkan script Lua terlebih dahulu.");
+        if (!script) return alert("Error: Masukkan script Lua terlebih dahulu.");
 
-      // UI Loading State
-      btn.disabled = true;
-      spinner.style.display = "block";
-      btnText.innerText = "Processing...";
-      loaderOut.value = "-- Menghubungi server dan melakukan obfuskasi...\n-- Harap tunggu.";
+        btn.disabled = true; spinner.style.display = "block"; btnText.innerText = "Processing...";
+        loaderOut.value = "-- Menghubungi server Prometheus...\n-- Harap tunggu.";
 
-      try {
-          const response = await fetch('/api/obfuscate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ script, preset, antiTamper: useAntiTamper })
-          });
+        try {
+            const response = await fetch('/api/obfuscate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ script, preset, antiTamper: useAntiTamper })
+            });
 
-          const data = await response.json();
+            const data = await response.json();
 
-          if (data.success) {
-              currentLoader = data.loader;
-              loaderOut.value = "-- Obfuskasi Berhasil!\n-- Gunakan loadstring di bawah ini untuk mengeksekusi script.\n\n" + data.loader;
-          } else {
-              loaderOut.value = "-- TERJADI KESALAHAN SERVER --\n\n" + data.error;
-          }
-      } catch (err) {
-          loaderOut.value = "-- GAGAL TERHUBUNG KE SERVER --\nPastikan backend Node.js sedang berjalan.";
-      } finally {
-          btn.disabled = false;
-          spinner.style.display = "none";
-          btnText.innerText = "Execute Obfuscation →";
-      }
-  }
+            if (data.success) {
+                currentLoader = data.loader;
+                loaderOut.value = "-- Obfuskasi Berhasil!\n-- Gunakan loadstring di bawah ini.\n\n" + data.loader;
+            } else {
+                loaderOut.value = "-- SERVER ERROR --\n\n" + data.error;
+            }
+        } catch (err) {
+            loaderOut.value = "-- CONNECTION FAILED --\nPastikan backend Node.js berjalan.";
+        } finally {
+            btn.disabled = false; spinner.style.display = "none"; btnText.innerText = "Execute Obfuscation";
+        }
+    }
 
-  function copyLoader() {
-      if (!currentLoader) return;
-      navigator.clipboard.writeText(currentLoader).then(() => {
-          const btn = event.target;
-          const oldText = btn.textContent;
-          btn.textContent = "copied!";
-          btn.style.color = "var(--accent)";
-          setTimeout(() => { 
-              btn.textContent = oldText;
-              btn.style.color = "var(--text-muted)";
-          }, 1500);
-      });
-  }
+    function copyLoader() {
+        if (!currentLoader) return;
+        navigator.clipboard.writeText(currentLoader).then(() => {
+            const btn = event.target; const oldText = btn.textContent;
+            btn.textContent = "copied!"; btn.style.color = "var(--accent)";
+            setTimeout(() => { btn.textContent = oldText; btn.style.color = "var(--text-muted)"; }, 1500);
+        });
+    }
 </script>
 </body>
 </html>
