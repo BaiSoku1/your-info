@@ -14,6 +14,12 @@ app.use(express.static('public'));
 const scriptDatabase = new Map();
 const tempDir = path.join(__dirname, 'temp');
 
+// --- TAMBAHKAN 3 BARIS INI ---
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir);
+}
+// -----------------------------
+
 function obfuscateWithPrometheus(scriptContent) {
     return new Promise((resolve, reject) => {
         const tempId = Date.now();
