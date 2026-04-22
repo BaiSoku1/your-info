@@ -29,10 +29,10 @@
         .header h1 span { background: linear-gradient(135deg, #a78bfa, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header p { color: var(--text-muted); font-size: 0.9rem; }
 
-        /* CONTROLS (Rata ujung ke ujung) */
+        /* CONTROLS */
         .controls-bar {
             display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
-            justify-content: space-between; /* <--- Kunci biar rata */
+            justify-content: space-between; 
             background: var(--bg-card); padding: 16px 20px; border: 1px solid var(--border); border-radius: 12px;
         }
         .control-group { display: flex; align-items: center; gap: 12px; }
@@ -72,7 +72,7 @@
         }
         textarea::placeholder { color: #3f3f46; }
 
-        /* BUTTON MAIN (100% Full width) */
+        /* BUTTON MAIN */
         .action-row { width: 100%; margin-bottom: 20px; }
         .btn-main {
             width: 100%; font-family: var(--font-ui); font-size: 15px; font-weight: 600; padding: 16px;
@@ -168,6 +168,8 @@
         loaderOut.value = "-- Menghubungi server Prometheus...\n-- Harap tunggu.";
 
         try {
+            // URL ini menyesuaikan. Jika frontend dan backend satu server (di Railway), gunakan /api/obfuscate
+            // Jika frontend dipisah ke Vercel, ganti url ini menjadi URL lengkap Railway kamu.
             const response = await fetch('/api/obfuscate', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ script, preset, antiTamper: useAntiTamper })
