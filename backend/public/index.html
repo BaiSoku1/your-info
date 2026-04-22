@@ -28,7 +28,7 @@
             
             try {
                 // Di Codespaces, kita panggil '/api/obfuscate' secara relatif
-                const response = await fetch('https://remote-loader-project-production.up.railway.app/api/obfuscate', {
+                const response = await fetch('https://obfus-production.up.railway.app//api/obfuscate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ script: script })
