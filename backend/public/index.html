@@ -12,40 +12,17 @@
             --accent: #8b5cf6; --success: #10b981; --glow: rgba(139, 92, 246, 0.15);
             --font-mono: 'JetBrains Mono', monospace; --font-ui: 'Inter', sans-serif;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            background-color: var(--bg-base); color: var(--text-main); font-family: var(--font-ui);
-            min-height: 100vh; display: flex; justify-content: center; align-items: center;
-            padding: 20px; background-image: radial-gradient(circle at top center, var(--glow) 0%, transparent 40%);
-        }
-
+        body { background-color: var(--bg-base); color: var(--text-main); font-family: var(--font-ui); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; background-image: radial-gradient(circle at top center, var(--glow) 0%, transparent 40%); }
         .container { width: 100%; max-width: 800px; animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-
-        /* HEADER */
         .header { margin-bottom: 32px; text-align: center; }
         .header h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.05em; margin-bottom: 6px; }
         .header h1 span { background: linear-gradient(135deg, #a78bfa, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header p { color: var(--text-muted); font-size: 0.9rem; }
-
-        /* CONTROLS */
-        .controls-bar {
-            display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
-            justify-content: space-between; 
-            background: var(--bg-card); padding: 16px 20px; border: 1px solid var(--border); border-radius: 12px;
-        }
+        .controls-bar { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 16px 20px; border: 1px solid var(--border); border-radius: 12px; }
         .control-group { display: flex; align-items: center; gap: 12px; }
         .control-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
-
-        select {
-            background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px;
-            color: var(--text-main); font-family: var(--font-mono); font-size: 12px;
-            padding: 10px 14px; outline: none; cursor: pointer; transition: 0.2s;
-        }
-        select:focus { border-color: var(--accent); }
-
-        /* TOGGLE */
+        select { background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-family: var(--font-mono); font-size: 12px; padding: 10px 14px; outline: none; cursor: pointer; }
         .switch-wrapper { display: flex; align-items: center; gap: 10px; }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -53,11 +30,8 @@
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .3s; border-radius: 50%; }
         input:checked + .slider { background-color: rgba(139, 92, 246, 0.2); border-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); background-color: var(--accent); }
-
-        /* EDITORS */
         .editors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
         @media (max-width: 680px) { .editors { grid-template-columns: 1fr; } }
-
         .editor-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
         .editor-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .editor-title { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
@@ -65,136 +39,85 @@
         .editor-dot.out { background: var(--success); }
         .editor-action { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: all 0.15s; }
         .editor-action:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
-
-        textarea {
-            flex: 1; width: 100%; min-height: 280px; background: transparent; border: none; outline: none; padding: 16px;
-            font-family: var(--font-mono); font-size: 12.5px; color: var(--text-main); resize: vertical; line-height: 1.6;
-        }
+        textarea { flex: 1; width: 100%; min-height: 280px; background: transparent; border: none; outline: none; padding: 16px; font-family: var(--font-mono); font-size: 12.5px; color: var(--text-main); resize: vertical; line-height: 1.6; }
         textarea::placeholder { color: #3f3f46; }
-
-        /* BUTTON MAIN */
         .action-row { width: 100%; margin-bottom: 20px; }
-        .btn-main {
-            width: 100%; font-family: var(--font-ui); font-size: 15px; font-weight: 600; padding: 16px;
-            background: var(--text-main); color: var(--bg-base); border: none; border-radius: 12px;
-            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
-        }
+        .btn-main { width: 100%; font-family: var(--font-ui); font-size: 15px; font-weight: 600; padding: 16px; background: var(--text-main); color: var(--bg-base); border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-main:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
         .btn-main:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
-
-        /* FOOTER INFO */
         .safe-note { display: flex; gap: 10px; padding: 14px 16px; background: rgba(139, 92, 246, 0.05); border: 1px dashed rgba(139, 92, 246, 0.2); border-radius: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
-        
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-radius: 50%; border-top-color: var(--bg-base); animation: spin 0.8s linear infinite; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-
 <div class="container">
     <div class="header">
         <h1><span>RBX</span> Loader</h1>
         <p>Enterprise-grade Remote Protection</p>
     </div>
-
     <div class="controls-bar">
         <div class="control-group">
             <span class="control-label">Preset //</span>
-            <select id="preset">
-                <option value="Weak">Weak (Fast)</option>
-                <option value="Medium" selected>Medium (Recommended)</option>
-                <option value="Strong">Strong (Heavy)</option>
-            </select>
+            <select id="preset"><option value="Weak">Weak</option><option value="Medium" selected>Medium</option><option value="Strong">Strong</option></select>
         </div>
-
         <div class="control-group">
             <span class="control-label">Anti-Tamper //</span>
-            <div class="switch-wrapper">
-                <label class="switch">
-                    <input type="checkbox" id="antiTamperToggle" checked>
-                    <span class="slider"></span>
-                </label>
-                <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">Crash on edit</span>
-            </div>
+            <div class="switch-wrapper"><label class="switch"><input type="checkbox" id="antiTamperToggle" checked><span class="slider"></span></label><span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">Crash on edit</span></div>
         </div>
     </div>
-
     <div class="editors">
         <div class="editor-panel">
-            <div class="editor-head">
-                <div class="editor-title"><div class="editor-dot"></div>script_input.lua</div>
-                <button class="editor-action" onclick="document.getElementById('scriptInput').value=''">clear</button>
-            </div>
+            <div class="editor-head"><div class="editor-title"><div class="editor-dot"></div>script_input.lua</div><button class="editor-action" onclick="document.getElementById('scriptInput').value=''">clear</button></div>
             <textarea id="scriptInput" spellcheck="false" placeholder="-- Paste original Lua script here..."></textarea>
         </div>
         <div class="editor-panel">
-            <div class="editor-head">
-                <div class="editor-title"><div class="editor-dot out"></div>loader_output.txt</div>
-                <button class="editor-action" onclick="copyLoader()">copy loader</button>
-            </div>
+            <div class="editor-head"><div class="editor-title"><div class="editor-dot out"></div>loader_output.txt</div><button class="editor-action" onclick="copyLoader()">copy loader</button></div>
             <textarea id="loaderOutput" readonly placeholder="-- Remote loadstring will appear here..."></textarea>
         </div>
     </div>
-
     <div class="action-row">
-        <button id="obfBtn" class="btn-main" onclick="handleObfuscate()">
-            <div class="spinner" id="spinner"></div>
-            <span id="btnText">Execute Obfuscation</span>
-        </button>
+        <button id="obfBtn" class="btn-main" onclick="handleObfuscate()"><div class="spinner" id="spinner"></div><span id="btnText">Execute Obfuscation</span></button>
     </div>
-
     <div class="safe-note">
-        <span>INFO // Skrip dieksekusi di server tertutup. Loadstring API diproteksi sistem anti-skid. Log akan terekam ke Telegram administrator.</span>
+        <span>INFO // Skrip dieksekusi di server tertutup. Loadstring API diproteksi sistem anti-skid. Log terekam di Telegram. (Support 300KB+ Files)</span>
     </div>
 </div>
-
 <script>
     let currentLoader = "";
-
     async function handleObfuscate() {
         const script = document.getElementById('scriptInput').value.trim();
         const preset = document.getElementById('preset').value;
         const useAntiTamper = document.getElementById('antiTamperToggle').checked;
-        
         const btn = document.getElementById('obfBtn');
         const spinner = document.getElementById('spinner');
         const btnText = document.getElementById('btnText');
         const loaderOut = document.getElementById('loaderOutput');
 
         if (!script) return alert("Error: Masukkan script Lua terlebih dahulu.");
-
         btn.disabled = true; spinner.style.display = "block"; btnText.innerText = "Processing...";
-        loaderOut.value = "-- Menghubungi server Prometheus...\n-- Harap tunggu.";
+        loaderOut.value = "-- Processing file...\n-- Harap tunggu (Bisa memakan waktu untuk file besar).";
 
         try {
-            // URL sudah diatur menunjuk ke backend Railway kamu
+            // TERHUBUNG LANGSUNG KE BACKEND RAILWAY
             const response = await fetch('https://remote-loader-project-production.up.railway.app/api/obfuscate', {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ script, preset, antiTamper: useAntiTamper })
             });
-
             const data = await response.json();
-
             if (data.success) {
                 currentLoader = data.loader;
-                loaderOut.value = "-- Obfuskasi Berhasil!\n-- Gunakan loadstring di bawah ini.\n\n" + data.loader;
-            } else {
-                loaderOut.value = "-- SERVER ERROR --\n\n" + data.error;
-            }
-        } catch (err) {
-            loaderOut.value = "-- CONNECTION FAILED --\nPastikan backend Node.js berjalan.";
-        } finally {
-            btn.disabled = false; spinner.style.display = "none"; btnText.innerText = "Execute Obfuscation";
-        }
+                loaderOut.value = "-- Obfuscation Success!\n\n" + data.loader;
+            } else { loaderOut.value = "-- ERROR --\n\n" + data.error; }
+        } catch (err) { loaderOut.value = "-- CONNECTION FAILED --\nCek log server di Railway."; } 
+        finally { btn.disabled = false; spinner.style.display = "none"; btnText.innerText = "Execute Obfuscation"; }
     }
-
     function copyLoader() {
         if (!currentLoader) return;
         navigator.clipboard.writeText(currentLoader).then(() => {
             const btn = event.target; const oldText = btn.textContent;
-            btn.textContent = "copied!"; btn.style.color = "var(--accent)";
+            btn.textContent = "copied!"; btn.style.color = "var(--text-main)";
             setTimeout(() => { btn.textContent = oldText; btn.style.color = "var(--text-muted)"; }, 1500);
         });
     }
