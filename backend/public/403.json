@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>403 — Access Denied</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #ff2d2d;
+    --red-dim: rgba(255,45,45,0.12);
+    --red-glow: rgba(255,45,45,0.35);
+    --bg: #050508;
+    --grid: rgba(255,45,45,0.05);
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: #fff;
+    font-family: var(--mono);
+    overflow: hidden;
+  }
+
+  /* Animated grid background */
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridDrift 20s linear infinite;
+  }
+  @keyframes gridDrift {
+    0%   { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+  }
+
+  /* Scanline overlay */
+  .scanlines {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+  }
+
+  /* Red vignette */
+  .vignette {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(255,0,0,0.08) 100%);
+  }
+
+  /* Main container */
+  .container {
+    position: relative; z-index: 10;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  /* Glitch large text */
+  .glitch-wrap {
+    position: relative;
+    margin-bottom: 0.5rem;
+  }
+
+  .glitch {
+    font-family: var(--display);
+    font-size: clamp(80px, 18vw, 180px);
+    font-weight: 800;
+    color: var(--red);
+    letter-spacing: -4px;
+    line-height: 1;
+    text-shadow:
+      0 0 30px var(--red-glow),
+      0 0 80px rgba(255,45,45,0.15);
+    animation: glitchMain 4s infinite;
+    position: relative;
+  }
+
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    font-family: var(--display);
+    font-size: inherit;
+    font-weight: 800;
+    letter-spacing: -4px;
+  }
+  .glitch::before {
+    color: #00ffff;
+    clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+    animation: glitchTop 3.5s infinite;
+    opacity: 0.6;
+  }
+  .glitch::after {
+    color: #ff00ff;
+    clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+    animation: glitchBottom 4.2s infinite;
+    opacity: 0.6;
+  }
+
+  @keyframes glitchMain {
+    0%, 90%, 100% { transform: translate(0); }
+    91% { transform: translate(-3px, 1px); }
+    93% { transform: translate(3px, -1px); }
+    95% { transform: translate(-2px, 2px); }
+    97% { transform: translate(2px, -2px); }
+  }
+  @keyframes glitchTop {
+    0%, 89%, 100% { transform: translate(0); }
+    90% { transform: translate(-6px, 0); }
+    92% { transform: translate(6px, 0); }
+    94% { transform: translate(-4px, 0); }
+  }
+  @keyframes glitchBottom {
+    0%, 88%, 100% { transform: translate(0); }
+    89% { transform: translate(5px, 0); }
+    91% { transform: translate(-5px, 0); }
+    93% { transform: translate(3px, 0); }
+  }
+
+  /* Divider */
+  .divider {
+    width: min(500px, 90vw);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    margin: 1.5rem 0;
+    position: relative;
+  }
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: -3px; left: 50%; transform: translateX(-50%);
+    width: 6px; height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--red);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.4; transform: translateX(-50%) scale(0.6); }
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--red-dim);
+    border: 1px solid rgba(255,45,45,0.3);
+    padding: 6px 16px;
+    border-radius: 2px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 1.5rem;
+    animation: fadeIn 0.8s ease forwards;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    background: var(--red);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--red);
+    animation: blink 1.2s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Message card */
+  .card {
+    width: min(500px, 92vw);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,45,45,0.15);
+    border-left: 3px solid var(--red);
+    padding: 1.8rem 2rem;
+    animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both;
+  }
+
+  .card-title {
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.5px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.8;
+    letter-spacing: 0.3px;
+  }
+
+  /* Terminal log lines */
+  .log-lines {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .log {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    display: flex;
+    gap: 10px;
+  }
+  .log .tag { color: var(--red); opacity: 0.7; }
+  .log.ok .tag  { color: #2dff8e; }
+  .log.warn .tag { color: #ffd62d; }
+
+  /* Decorative corner */
+  .corner {
+    position: fixed;
+    width: 60px; height: 60px;
+    z-index: 5;
+  }
+  .corner::before, .corner::after {
+    content: '';
+    position: absolute;
+    background: var(--red);
+    opacity: 0.4;
+  }
+  .corner-tl { top: 20px; left: 20px; }
+  .corner-br { bottom: 20px; right: 20px; }
+  .corner-tl::before, .corner-br::before { width: 2px; height: 20px; }
+  .corner-tl::after, .corner-br::after   { width: 20px; height: 2px; }
+  .corner-tl::before { top: 0; left: 0; }
+  .corner-tl::after  { top: 0; left: 0; }
+  .corner-br::before { bottom: 0; right: 0; }
+  .corner-br::after  { bottom: 0; right: 0; }
+
+  /* Coord display */
+  .coords {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: rgba(255,255,255,0.12);
+    letter-spacing: 2px;
+    z-index: 10;
+  }
+
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-br"></div>
+
+<div class="container">
+  <div class="status-badge">
+    <span class="dot"></span>
+    HTTP 403 — Forbidden
+  </div>
+
+  <div class="glitch-wrap">
+    <div class="glitch" data-text="403">403</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="card">
+    <div class="card-title">Access Denied</div>
+    <div class="card-desc">
+      This resource is protected and cannot be accessed directly.<br>
+      Requests must originate from an authorized Roblox game session.
+    </div>
+    <div class="log-lines">
+      <div class="log"><span class="tag">[ERR]</span> Invalid request origin detected</div>
+      <div class="log warn"><span class="tag">[WRN]</span> User-Agent mismatch — blocked</div>
+      <div class="log ok"><span class="tag">[SYS]</span> Incident logged successfully</div>
+    </div>
+  </div>
+</div>
+
+<div class="coords" id="coords">SYS::MONITOR // PROTECTED ENDPOINT // RBX.LOADER</div>
+
+<script>
+  // Fake live timestamp
+  const el = document.getElementById('coords');
+  setInterval(() => {
+    const now = new Date();
+    const ts = now.toISOString().replace('T',' ').slice(0,19);
+    el.textContent = `SYS::MONITOR // ${ts} UTC // PROTECTED`;
+  }, 1000);
+</script>
+</body>
+</html>
