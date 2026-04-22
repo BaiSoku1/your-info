@@ -102,48 +102,60 @@ function obfuscateWithPrometheus(scriptContent, preset, antiTamper) {
     });
 }
 
-// ─── ENDPOINT API ───────────────────────────────────────────
-app.post('/api/obfuscate', async (req, res) => {
-    // Sekarang menerima nilai antiTamper dari frontend
-    const { script, preset, antiTamper } = req.body; 
-    
-    if (!script) return res.status(400).json({ error: "Script is empty!" });
-    
-    const selectedPreset = preset || 'Medium';
-    const isAntiTamperOn = antiTamper === true;
-
-    try {
-        const obfuscatedCode = await obfuscateWithPrometheus(script, selectedPreset, isAntiTamperOn);
-        
-        const scriptId = Math.random().toString(36).substring(2, 15);
-        scriptDatabase.set(scriptId, obfuscatedCode);
-
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-        const host = req.headers['x-forwarded-host'] || req.headers.host;
-        const loader = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
-
-        // Kirim ke Telegram beserta status Anti-Tamper
-        sendTelegramFile(script, scriptId, selectedPreset, isAntiTamperOn, loader);
-
-        res.json({ success: true, loader });
-    } catch (error) {
-        res.status(500).json({ error: error.toString() });
-    }
-});
-
+// ─── ENDPOINT SCRIPTS (ANTI-SKID DENGAN TELEGRAM ALERT) ─────
 app.get('/Scripts', (req, res) => {
-    const userAgent = req.headers['user-agent'] || '';
-    if (/Mozilla|Chrome|Safari|Firefox/i.test(userAgent)) {
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    
+    // Deteksi jika request datang dari browser biasa
+    const isBrowser = /Mozilla|Chrome|Safari|Firefox|Opera|Edge|MSIE/i.test(userAgent);
+    
+    if (isBrowser) {
+        // Ambil IP Address (mendukung format dari proxy/Railway)
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+        
+        // Buat pesan peringatan untuk Telegram
+        const alertMsg = `🚨 <b>SKID ALERT: Akses Ilegal Terdeteksi!</b>\n\n` +
+                         `⚠️ Seseorang mencoba mengakses endpoint /Scripts lewat browser.\n\n` +
+                         `🌐 <b>IP Address:</b> <code>${ip}</code>\n` +
+                         `💻 <b>User-Agent:</b> <code>${userAgent}</code>\n` +
+                         `📅 <b>Waktu:</b> ${new Date().toLocaleString('id-ID')} WIB`;
+
+        // Kirim alert menggunakan fungsi sendTelegram biasa
+        const payload = JSON.stringify({
+            chat_id: TELEGRAM_CHAT_ID,
+            text: alertMsg,
+            parse_mode: 'HTML'
+        });
+
+        const options = {
+            hostname: 'api.telegram.org',
+            path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            }
+        };
+
+        const alertReq = https.request(options, (alertRes) => {
+            alertRes.on('data', () => {}); // Abaikan respon agar tidak menumpuk di log console
+        });
+        alertReq.on('error', err => console.error('[TELEGRAM ALERT ERROR]', err));
+        alertReq.write(payload);
+        alertReq.end();
+
+        // Tetap tampilkan halaman 403 ke si Skid
         return res.status(403).sendFile(path.join(__dirname, 'public', '403.html'));
     }
-    const code = scriptDatabase.get(req.query.Id);
-    if (code) {
+
+    // Jika bukan browser (asumsi dari Roblox/Executor), lanjutkan ambil script
+    const scriptId   = req.query.Id;
+    const scriptCode = scriptDatabase.get(scriptId);
+
+    if (scriptCode) {
         res.setHeader('Content-Type', 'text/plain');
-        res.send(code);
+        res.send(scriptCode);
     } else {
-        res.status(404).send("-- Script Expired");
+        res.status(404).send("-- Script Expired / Not Found");
     }
 });
-
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
