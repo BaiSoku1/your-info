@@ -15,230 +15,225 @@ AntiTamper.Description = "This Step Breaks your Script when it is modified. This
 AntiTamper.Name = "Anti Tamper"
 
 AntiTamper.SettingsDescriptor = {
-	UseDebug = {
-		type = "boolean",
-		default = true,
-		description = "Use debug library. (Recommended, however scripts will not work without debug library.)",
-	},
+    UseDebug = {
+        type = "boolean",
+        default = true,
+        description = "Use debug library. (Recommended, however scripts will not work without debug library.)",
+    },
 }
 
-local function generateSanityCheck()
-	local sanityCheckAnswers = {}
-	local sanityPasses = math.random(1, 10)
-	for i = 1, sanityPasses do
-		sanityCheckAnswers[i] = (math.random(1, 2 ^ 24) % 2 == 1)
-	end
-	local primaryCheck = RandomStrings.randomString()
-	local codeParts = {}
-	local function addCode(fmt, ...)
-		table.insert(codeParts, string.format(fmt, ...))
-	end
+local function generateObfuscatedCheck()
+    local checks = {}
+    local numChecks = math.random(5, 15)
+    
+    for i = 1, numChecks do
+        local checkType = math.random(1, 6)
+        local value = math.random(1, 2^24)
+        local expected = math.random(1, 2) == 1
+        checks[i] = {type = checkType, value = value, expected = expected}
+    end
+    
+    local codeParts = {}
+    local varName = "_" .. RandomStrings.randomString(8)
+    local resultVar = "_r" .. RandomStrings.randomString(6)
+    
+    table.insert(codeParts, string.format("do local %s = true; local %s;", varName, resultVar))
+    
+    for _, check in ipairs(checks) do
+        if check.type == 1 then
+            table.insert(codeParts, string.format("%s = %s and (function() return %d + %d == %d end)();", 
+                varName, varName, check.value, math.random(1, 1000), check.value + math.random(1, 1000)))
+        elseif check.type == 2 then
+            table.insert(codeParts, string.format("%s = %s and (function() local a = {...}; return #a == %d end)(%s);", 
+                varName, varName, check.value, RandomStrings.randomString(5)))
+        elseif check.type == 3 then
+            table.insert(codeParts, string.format("%s = %s and (function() local t = {%d}; t[%d] = nil; return t[%d] == nil end)();", 
+                varName, varName, check.value, check.value % 5 + 1, check.value % 5 + 1))
+        elseif check.type == 4 then
+            table.insert(codeParts, string.format("%s = %s and (function() return type(%d) == '%s' end)();", 
+                varName, varName, check.value, check.value > 100 and "number" or "number"))
+        elseif check.type == 5 then
+            table.insert(codeParts, string.format("%s = %s and (function() local x = %d; return x == tonumber(tostring(x)) end)();", 
+                varName, varName, check.value))
+        else
+            table.insert(codeParts, string.format("%s = %s and (function() return #{%d, %d, %d} == 3 end)();", 
+                varName, varName, check.value, check.value + 1, check.value + 2))
+        end
+    end
+    
+    table.insert(codeParts, string.format("if not %s then while true do end end end", varName))
+    
+    return table.concat(codeParts, "\n")
+end
 
-	local function generateAssignment(idx)
-		local index = math.min(idx, sanityPasses)
-		addCode("            valid = %s;\n", tostring(sanityCheckAnswers[index]))
-	end
-	local function generateValidation(idx)
-		local index = math.min(idx - 1, sanityPasses)
-		addCode("            if valid == %s then\n", tostring(sanityCheckAnswers[index]))
-		addCode("            else\n")
-		addCode("                while true do end\n")
-		addCode("            end\n")
-	end
+local function generateAntiDump()
+    local codeParts = {}
+    local protectName = "_p" .. RandomStrings.randomString(10)
+    local dumpName = "_d" .. RandomStrings.randomString(8)
+    
+    codeParts[#codeParts + 1] = string.format([[
+do local %s = debug and debug.getinfo or function() return nil end
+local %s = string and string.dump or function() return nil end
+local function %s()
+    local function %s()
+        local function %s()
+            local function %s()
+                local function %s()
+                    local function %s()
+                        local function %s()
+                            if %s then
+                                local info = %s(1, "S")
+                                if info and info.what == "C" then
+                                    return true
+                                end
+                            end
+                            return false
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+end
+]], protectName, dumpName, 
+RandomStrings.randomString(8), RandomStrings.randomString(8),
+RandomStrings.randomString(8), RandomStrings.randomString(8),
+RandomStrings.randomString(8), RandomStrings.randomString(8),
+protectName, protectName)
 
-	addCode("do local valid = '%s';", primaryCheck)
-	addCode("for i = 0, %d do\n", sanityPasses)
-	for i = 0, sanityPasses do
-		if i == 0 then
-			addCode("        if i == 0 then\n")
-			addCode("            if valid ~= '%s' then\n", primaryCheck)
-			addCode("                while true do end\n")
-			addCode("            end\n")
-			addCode("            valid = %s;\n", tostring(sanityCheckAnswers[1]))
-		elseif i == 1 then
-			addCode("        elseif i == 1 then\n")
-			addCode("            if valid == %s then\n", tostring(sanityCheckAnswers[1]))
-			addCode("            end\n")
-		else
-			addCode("        elseif i == %d then\n", i)
+    return table.concat(codeParts)
+end
 
-			--[[
-                Basically, even iterations are used to assign a new sanity check value,
-                and odd iterations are used to validate the previous sanity check value.
-            ]]
-			if i % 2 == 0 then
-				generateAssignment(i)
-			else
-				generateValidation(i)
-			end
-		end
-	end
-	addCode("        end\n")
-	addCode("    end\n")
-	addCode("do valid = true end\n")
-	return table.concat(codeParts)
+local function generateVMCheck()
+    return [[
+do local _v1 = 0
+local _v2 = 0
+for _i = 1, 100 do
+    _v1 = _v1 + _i
+    _v2 = _v2 + (101 - _i)
+end
+if _v1 ~= _v2 then
+    while true do end
+end
+end
+]]
 end
 
 function AntiTamper:init(settings) end
 
 function AntiTamper:apply(ast, pipeline)
-	if pipeline.PrettyPrint then
-		logger:warn(string.format('"%s" cannot be used with PrettyPrint, ignoring "%s"', self.Name, self.Name))
-		return ast
-	end
-	local code = generateSanityCheck()
-	if self.UseDebug then
-		local string = RandomStrings.randomString()
-		code = code
-			.. [[
-            -- Anti Beautify
-			local sethook = debug and debug.sethook or function() end;
-			local allowedLine = nil;
-			local called = 0;
-			sethook(function(s, line)
-				if not line then
-					return
-				end
-				called = called + 1;
-				if allowedLine then
-					if allowedLine ~= line then
-						sethook(error, "l", 5);
-					end
-				else
-					allowedLine = line;
-				end
-			end, "l", 5);
-			(function() end)();
-			(function() end)();
-			sethook();
-			if called < 2 then
-				valid = false;
-			end
-            if called < 2 then
-                valid = false;
-            end
-
-            -- Anti Function Hook
-            local funcs = {pcall, string.char, debug.getinfo, string.dump}
-            for i = 1, #funcs do
-                if debug.getinfo(funcs[i]).what ~= "C" then
-                    valid = false;
-                end
-
-                if debug.getupvalue(funcs[i], 1) then
-                    valid = false;
-                end
-
-                if pcall(string.dump, funcs[i]) then
-                    valid = false;
-                end
-            end
-
-            -- Anti Beautify
-            local function getTraceback()
-                local str = (function(arg)
-                    return debug.traceback(arg)
-                end)("]] .. string .. [[");
-                return str;
-            end
-
-            local traceback = getTraceback();
-            valid = valid and traceback:sub(1, traceback:find("\n") - 1) == "]] .. string .. [[";
-            local iter = traceback:gmatch(":(%d*):");
-            local v, c = iter(), 1;
-            for i in iter do
-                valid = valid and i == v;
-                c = c + 1;
-            end
-            valid = valid and c >= 2;
-        ]]
+    if pipeline.PrettyPrint then
+        logger:warn(string.format('"%s" cannot be used with PrettyPrint, ignoring "%s"', self.Name, self.Name))
+        return ast
     end
-    code = code .. [[
-    local gmatch = string.gmatch;
-    local err = function() error("Tamper Detected!") end;
-
-    local pcallIntact2 = false;
-    local pcallIntact = pcall(function()
-        pcallIntact2 = true;
-    end) and pcallIntact2;
-
-    local random = math.random;
-    local tblconcat = table.concat;
-    local unpkg = table and table.unpack or unpack;
-    local n = random(3, 65);
-    local acc1 = 0;
-    local acc2 = 0;
-    local pcallRet = {pcall(function() local a = ]] .. tostring(math.random(1, 2^24)) .. [[ - "]] .. RandomStrings.randomString() .. [[" ^ ]] .. tostring(math.random(1, 2^24)) .. [[ return "]] .. RandomStrings.randomString() .. [[" / a; end)};
-    local origMsg = pcallRet[2];
-    local line = tonumber(gmatch(tostring(origMsg), ':(%d*):')());
-    for i = 1, n do
-        local len = math.random(1, 100);
-        local n2 = random(0, 255);
-        local pos = random(1, len);
-        local shouldErr = random(1, 2) == 1;
-        local msg = origMsg:gsub(':(%d*):', ':' .. tostring(random(0, 10000)) .. ':');
-        local arr = {pcall(function()
-            if random(1, 2) == 1 or i == n then
-                local line2 = tonumber(gmatch(tostring(({pcall(function() local a = ]] .. tostring(math.random(1, 2^24)) .. [[ - "]] .. RandomStrings.randomString() .. [[" ^ ]] .. tostring(math.random(1, 2^24)) .. [[ return "]] .. RandomStrings.randomString() .. [[" / a; end)})[2]), ':(%d*):')());
-                valid = valid and line == line2;
-            end
-            if shouldErr then
-                error(msg, 0);
-            end
-            local arr = {};
-            for i = 1, len do
-                arr[i] = random(0, 255);
-            end
-            arr[pos] = n2;
-            return unpkg(arr);
-        end)};
-        if shouldErr then
-            valid = valid and arr[1] == false and arr[2] == msg;
-        else
-            valid = valid and arr[1];
-            acc1 = (acc1 + arr[pos + 1]) % 256;
-            acc2 = (acc2 + n2) % 256;
-        end
-    end
-    valid = valid and acc1 == acc2;
-
-    if valid then else
-        repeat
-            return (function()
-                while true do
-                    l1, l2 = l2, l1;
-                    err();
+    
+    local finalCode = {}
+    
+    finalCode[#finalCode + 1] = generateObfuscatedCheck()
+    finalCode[#finalCode + 1] = generateVMCheck()
+    
+    if self.UseDebug then
+        finalCode[#finalCode + 1] = generateAntiDump()
+        
+        finalCode[#finalCode + 1] = [[
+do local _hook = debug and debug.sethook
+local _lines = {}
+local _lineCount = 0
+local _lastLine = 0
+if _hook then
+    _hook(function(event, line)
+        if event == "line" then
+            _lineCount = _lineCount + 1
+            _lines[line] = (_lines[line] or 0) + 1
+            if _lineCount > 5 then
+                local _avg = 0
+                for _, v in pairs(_lines) do
+                    _avg = _avg + v
                 end
-            end)();
-        until true;
-        while true do
-            l2 = random(1, 6);
-            if l2 > 2 then
-                l2 = tostring(l1);
-            else
-                l1 = l2;
+                _avg = _avg / (#_lines + 1)
+                if _avg > 3 then
+                    _hook()
+                    error("")
+                end
             end
+            _lastLine = line
         end
-        return;
+    end, "l")
+end
+
+local _funcs = {pcall, xpcall, require, loadstring, loadfile}
+for _, _f in ipairs(_funcs) do
+    if debug and debug.getinfo then
+        local _info = debug.getinfo(_f)
+        if _info and _info.what ~= "C" then
+            while true do end
+        end
     end
 end
 
-    -- Anti Function Arg Hook
-    local obj = setmetatable({}, {
-        __tostring = err,
-    });
-    obj[math.random(1, 100)] = obj;
-    (function() end)(obj);
-
-    repeat until valid;
-    ]]
-
-    local parsed = Parser:new({LuaVersion = Enums.LuaVersion.Lua51}):parse(code);
-    local doStat = parsed.body.statements[1];
-    doStat.body.scope:setParent(ast.body.scope);
-    table.insert(ast.body.statements, 1, doStat);
-
-    return ast;
+_hook()
+end
+]]
+    end
+    
+    finalCode[#finalCode + 1] = [[
+do local _t = {}
+local _mt = {__mode = "k"}
+setmetatable(_t, _mt)
+for _i = 1, 1000 do
+    _t[_i] = _i
+end
+collectgarbage("collect")
+local _c = 0
+for _k, _ in pairs(_t) do
+    _c = _c + 1
+end
+if _c > 100 then
+    while true do end
+end
 end
 
-return AntiTamper;
+do local _s = debug and debug.getinfo or function() return {what = "C"} end
+local _inf = _s(1)
+if _inf and _inf.what ~= "C" then
+    _G = nil
+    error("")
+end
+end
+
+local _err = error
+local _load = load
+local _loadstring = loadstring or _load
+
+local _protected = true
+local function _check()
+    if not _protected then
+        _err("")
+    end
+end
+
+local _wrap = function(f)
+    return function(...)
+        _check()
+        return f(...)
+    end
+end
+
+pcall = _wrap(pcall)
+xpcall = _wrap(xpcall)
+load = _wrap(load)
+loadstring = _wrap(loadstring or load)
+
+_protected = false
+]]
+    
+    local parsed = Parser:new({LuaVersion = Enums.LuaVersion.Lua51}):parse(table.concat(finalCode, "\n"))
+    local doStat = parsed.body.statements[1]
+    doStat.body.scope:setParent(ast.body.scope)
+    table.insert(ast.body.statements, 1, doStat)
+    
+    return ast
+end
+
+return AntiTamper
