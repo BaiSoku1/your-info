@@ -1,18 +1,20 @@
 const express = require('express');
-const cors = require('cors'); // Tambahan baru
+const cors = require('cors');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
-app.use(cors()); // Tambahan baru
-app.use(express.json())
-
-// Ini yang membuat frontend (HTML) langsung bisa diakses!
+app.use(cors());
+app.use(express.json());
 app.use(express.static('public'));
 
 const scriptDatabase = new Map();
 const tempDir = path.join(__dirname, 'temp');
+
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir);
+}
 
 function obfuscateWithPrometheus(scriptContent) {
     return new Promise((resolve, reject) => {
@@ -22,15 +24,18 @@ function obfuscateWithPrometheus(scriptContent) {
 
         fs.writeFileSync(inputPath, scriptContent);
 
-        // Path ke mesin Prometheus
         const prometheusPath = path.join(__dirname, '../Prometheus/cli.lua');
-        // Gunakan lua5.3 sesuai yang kita install di Codespaces
         const command = `lua5.3 "${prometheusPath}" --preset Medium "${inputPath}"`;
         
-        exec(command, (error) => {
+        console.log("Menjalankan command:", command);
+
+        exec(command, (error, stdout, stderr) => {
             if (error) {
+                console.error("=== ERROR DARI PROMETHEUS ===");
+                console.error(error);
+                console.error("STDERR:", stderr);
                 if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-                return reject("Gagal mengobfuskasi kode.");
+                return reject("Gagal mengobfuskasi kode (Cek Log Railway).");
             }
             if (fs.existsSync(outputPath)) {
                 const obfuscatedCode = fs.readFileSync(outputPath, 'utf8');
@@ -38,6 +43,8 @@ function obfuscateWithPrometheus(scriptContent) {
                 fs.unlinkSync(outputPath);
                 resolve(obfuscatedCode);
             } else {
+                console.error("=== ERROR OUTPUT ===");
+                console.error("File output tidak ditemukan di:", outputPath);
                 reject("File output tidak ditemukan.");
             }
         });
@@ -49,18 +56,20 @@ app.post('/api/obfuscate', async (req, res) => {
     if (!script) return res.status(400).json({ error: "Script kosong!" });
 
     try {
+        console.log("Menerima request obfuscate...");
         const obfuscatedCode = await obfuscateWithPrometheus(script);
         const scriptId = Math.floor(Math.random() * 10000000000000).toString();
         scriptDatabase.set(scriptId, obfuscatedCode);
         
-        // Di Codespaces, kita bisa memaksa menggunakan header X-Forwarded-Host jika tersedia
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const host = req.headers['x-forwarded-host'] || req.headers.host;
         const loaderScript = `loadstring(game:HttpGet("${protocol}://${host}/Scripts?Id=${scriptId}"))("${scriptId}")`;
 
         res.json({ success: true, loader: loaderScript });
     } catch (error) {
-        res.status(500).json({ error: "Terjadi kesalahan server." });
+        console.error("=== ERROR UMUM ===");
+        console.error(error);
+        res.status(500).json({ error: error.toString() });
     }
 });
 
